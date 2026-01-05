@@ -3,6 +3,7 @@
   <span><a href="../README.md">English</a> | 中文</span>
 </div>
 
+
 **FastAPI-SIO-DI** 是一个为 FastAPI 量身打造的 Socket.IO 集成库。它让你能够以最熟悉的 **FastAPI 风格**（依赖注入、Pydantic 模型）来开发实时 WebSocket 应用。
 
 ## 核心特性

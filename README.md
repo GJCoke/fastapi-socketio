@@ -3,6 +3,7 @@
   <span>English | <a href="./docs/README-CN.md">中文</a></span>
 </div>
 
+
 **FastAPI-SIO-DI** is a library tailored for integrating Socket.IO with FastAPI. It allows you to develop real-time WebSocket applications using the familiar **FastAPI style** (Dependency Injection, Pydantic models).
 
 ## Key Features
