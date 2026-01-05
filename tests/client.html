@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>FastAPI-SIO 测试客户端</title>
+    <!-- 引入 Socket.IO 客户端 SDK (CDN) -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+        #log { background: #f4f4f4; border: 1px solid #ccc; padding: 10px; height: 300_px; overflow-y: auto; }
+        .status { font-weight: bold; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>FastAPI-SIO 调试面板</h1>
+    <div>
+        状态: <span id="status" class="status">未连接</span>
+    </div>
+    <br>
+    <button onclick="connect()">连接服务器</button>
+    <button onclick="sendMessage()">发送消息</button>
+    <button onclick="disconnect()">断开连接</button>
+    
+    <h3>日志:</h3>
+    <div id="log"></div>
+
+    <script>
+        let socket;
+        const logElement = document.getElementById('log');
+        const statusElement = document.getElementById('status');
+
+        function addLog(msg, isError = false) {
+            const div = document.createElement('div');
+            div.textContent = `${new Date().toLocaleTimeString()} - ${msg}`;
+            if (isError) div.className = 'error';
+            logElement.appendChild(div);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function connect() {
+            // 注意：如果你在 server.py 中 app.mount("/", sio_app)
+            // 那么这里的路径默认就是 /socket.io/
+            socket = io("http://127.0.0.1:8004", {
+                // 模拟 auth 字段（对应服务器 connect 事件的 auth 参数）
+                auth: {
+                    token: "my-secret-token"
+                },
+                // 如果你想测试 Header 依赖，可以在这里添加额外配置
+                // 注意：浏览器端无法在 WebSocket 握手阶段自定义 Header，
+                // 但可以在 HTTP Polling 阶段发送。
+                extraHeaders: {
+                    "Authorization": "Bearer browser-token"
+                }
+            });
+
+            socket.on("connect", () => {
+                statusElement.textContent = "已连接 (ID: " + socket.id + ")";
+                statusElement.className = "status success";
+                addLog("✅ 连接成功");
+            });
+
+            socket.on("connect_error", (err) => {
+                statusElement.textContent = "连接失败";
+                statusElement.className = "status error";
+                addLog("❌ 连接错误: " + err.message, true);
+                console.error("Connect Error Detail:", err);
+            });
+
+            socket.on("disconnect", () => {
+                statusElement.textContent = "已断开";
+                statusElement.className = "status";
+                addLog("⚠️ 与服务器断开连接");
+            });
+
+            socket.on("reply", (data) => {
+                addLog("📩 收到回复: " + JSON.stringify(data));
+            });
+        }
+
+        function sendMessage() {
+            if (!socket || !socket.connected) {
+                alert("请先连接服务器！");
+                return;
+            }
+            const data = { msg: "来自浏览器的 Hello!" };
+            addLog("📤 发送: " + JSON.stringify(data));
+            socket.emit("message", data);
+        }
+
+        function disconnect() {
+            if (socket) socket.disconnect();
+        }
+    </script>
+</body>
+</html>
