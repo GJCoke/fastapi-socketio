@@ -1,6 +1,9 @@
-# FastAPI-SIO
+<div align="center">
+  <h1>FastAPI-SIO-DI</h1>
+  <span><a href="../README.md">English</a> | 中文</span>
+</div>
 
-**FastAPI-SIO** 是一个为 FastAPI 量身打造的 Socket.IO 集成库。它让你能够以最熟悉的 **FastAPI 风格**（依赖注入、Pydantic 模型）来开发实时 WebSocket 应用。
+**FastAPI-SIO-DI** 是一个为 FastAPI 量身打造的 Socket.IO 集成库。它让你能够以最熟悉的 **FastAPI 风格**（依赖注入、Pydantic 模型）来开发实时 WebSocket 应用。
 
 ## 核心特性
 
@@ -11,7 +14,7 @@
 ## 安装
 
 ```bash
-pip install fastapi-sio
+pip install fastapi-sio-di
 ```
 
 ## 快速开始
@@ -74,7 +77,7 @@ uvicorn main:app
 
 ## 进阶用法
 ### 依赖注入 (Dependency Injection)
-`FastAPI-SIO` 的最大亮点是支持 `Depends`。这意味着你可以复用现有的 FastAPI 依赖逻辑（如数据库会话、用户鉴权）。
+`FastAPI-SIO-DI` 的最大亮点是支持 `Depends`。这意味着你可以复用现有的 FastAPI 依赖逻辑（如数据库会话、用户鉴权）。
 
 ```python
 from sqlalchemy.orm import Session
