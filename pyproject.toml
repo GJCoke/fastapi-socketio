@@ -1,8 +1,8 @@
 [project]
 name = "fastapi-sio-di"
-version = "0.1.1"
+version = "0.1.2"
 description = "FastAPI-SIO-DI is a library tailored for integrating Socket.IO with FastAPI. It allows you to develop real-time WebSocket applications using the familiar FastAPI style (Dependency Injection, Pydantic models)."
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "python-socketio>=5.16.0",
 ]
@@ -12,5 +12,5 @@ dev = [
     "fastapi>=0.128.0",
     "uvicorn>=0.40.0",
     "ruff>=0.14.5,<1.0",
-    "ty>=0.0.2",
+    "ty>=0.0.9",
 ]
