@@ -4,8 +4,11 @@
 </div>
 
 
-## FastAPI-SIO-DI
-是一个为 FastAPI 量身打造的 Socket.IO 集成库。它让你能够以最熟悉的 **FastAPI 风格**（依赖注入、Pydantic 模型）来开发实时 WebSocket 应用。
+[![PyPI](https://img.shields.io/pypi/v/fastapi-sio-di.svg)](https://pypi.org/project/fastapi-sio-di/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/GJCoke/fastapi-socketio/blob/v0.3.0/LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/)
+
+FastAPI-SIO-DI 是一个为 FastAPI 量身打造的 Socket.IO 集成库。它让你能够以最熟悉的 **FastAPI 风格**（依赖注入、Pydantic 模型）来开发实时 WebSocket 应用。
 
 ## 核心特性
 

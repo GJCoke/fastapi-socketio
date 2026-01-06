@@ -1,5 +1,6 @@
 from typing import Any, Dict, Optional
 
+
 class SID(str):
     """
     Marker class to indicate a 'sid' dependency.
@@ -19,6 +20,7 @@ class Environ:
     A wrapper for the WSGI/ASGI environment dictionary.
     Provides easy access to common request information.
     """
+
     def __init__(self, env: Dict[str, Any]):
         self._env = env
 
@@ -62,7 +64,9 @@ class Environ:
     @property
     def query_string(self) -> bytes:
         """Returns the raw query string."""
-        return self._env.get("query_string") or self._env.get("QUERY_STRING", "").encode()
+        return (
+            self._env.get("query_string") or self._env.get("QUERY_STRING", "").encode()
+        )
 
     @property
     def http_version(self) -> str:

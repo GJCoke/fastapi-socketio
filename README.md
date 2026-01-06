@@ -3,9 +3,11 @@
   <span>English | <a href="./docs/README-CN.md">中文</a></span>
 </div>
 
+[![PyPI](https://img.shields.io/pypi/v/fastapi-sio-di.svg)](https://pypi.org/project/fastapi-sio-di/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/GJCoke/fastapi-socketio/blob/v0.3.0/LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/)
 
-## FastAPI-SIO-DI
-is a library tailored for integrating Socket.IO with FastAPI. It allows you to develop real-time WebSocket applications using the familiar **FastAPI style** (Dependency Injection, Pydantic models).
+FastAPI-SIO-DI is a library tailored for integrating Socket.IO with FastAPI. It allows you to develop real-time WebSocket applications using the familiar **FastAPI style** (Dependency Injection, Pydantic models).
 
 ## Key Features
 
