@@ -48,7 +48,7 @@ class AsyncServer(SocketIOAsyncServer):
                 finally:
                     await context.run_teardowns()
 
-            super().on(
+            super(AsyncServer, self).on(
                 event=event, handler=wrapper, namespace=namespace
             )
             return func
