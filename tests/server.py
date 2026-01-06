@@ -6,6 +6,8 @@ from typing import Annotated
 
 from pydantic import BaseModel
 
+import json
+
 app = FastAPI()
 # 现在你可以直接像使用普通 AsyncServer 一样初始化它
 sio = AsyncServer(async_mode="asgi", cors_allowed_origins=["*"])

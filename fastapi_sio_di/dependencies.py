@@ -59,9 +59,8 @@ class Dependant:
 
         self.dependencies: Dict[str, Any] = {}
         self.special_params: Dict[str, Any] = {}
-        # 修改：保存参数对象而不是名字，以便后续获取 annotation
         self.data_param: Optional[inspect.Parameter] = None
-        self.data_param_name: Optional[str] = None  # 保持这个方便取名
+        self.data_param_name: Optional[str] = None
 
         for name, (kind, value) in sig_model.params.items():
             if kind == "depend":
@@ -71,12 +70,17 @@ class Dependant:
             elif kind == "unknown":
                 # Assume the first unknown parameter is the data payload
                 if self.data_param is None:
-                    self.data_param = value  # value 在这里是 inspect.Parameter
+                    self.data_param = value  # value is here inspect.Parameter
                     self.data_param_name = name
 
 
 def resolve_special_param(param: inspect.Parameter, cache: Dict[str, Any]) -> Any:
     """Resolve special annotated parameters like SID or Environ."""
+
+    if param.annotation is Environ:
+        env_dict = cache.get("__environ__", {})
+        return Environ(env_dict) if not isinstance(env_dict, Environ) else env_dict
+
     key = f"__{param.annotation.__name__.lower()}__"
     return cache.get(key)
 
