@@ -66,6 +66,8 @@ class AsyncServer(SocketIOAsyncServer):
                 cache["__sid__"] = sid
                 cache["__data__"] = data
                 cache["__environ__"] = environ
+                cache["__args__"] = args
+                cache["__kwargs__"] = kwargs
 
                 try:
                     return await solve_dependant(dependant, context, cache)

@@ -59,8 +59,7 @@ class Dependant:
 
         self.dependencies: Dict[str, Any] = {}
         self.special_params: Dict[str, Any] = {}
-        self.data_param: Optional[inspect.Parameter] = None
-        self.data_param_name: Optional[str] = None
+        self.unknown_params: List[Tuple[str, inspect.Parameter]] = []
 
         for name, (kind, value) in sig_model.params.items():
             if kind == "depend":
@@ -68,10 +67,11 @@ class Dependant:
             elif kind == "special":
                 self.special_params[name] = value.annotation
             elif kind == "unknown":
-                # Assume the first unknown parameter is the data payload
-                if self.data_param is None:
-                    self.data_param = value  # value is here inspect.Parameter
-                    self.data_param_name = name
+                self.unknown_params.append((name, value))
+
+    @property
+    def data_param_name(self) -> Optional[str]:
+        return self.unknown_params[0][0] if self.unknown_params else None
 
 
 def resolve_special_param(param: inspect.Parameter, cache: Dict[str, Any]) -> Any:
@@ -231,9 +231,20 @@ async def solve_dependant(
         )
 
     # 3. Inject the main data payload
-    if dependant.data_param_name:
-        kwargs[dependant.data_param_name] = resolve_unknown_param(
-            dependant.data_param, cache
-        )
+    raw_args = cache.get("__args__", ())
+
+    for i, (name, param) in enumerate(dependant.unknown_params):
+        if i < len(raw_args):
+            val = raw_args[i]
+            if (
+                inspect.isclass(param.annotation)
+                and issubclass(param.annotation, BaseModel)
+                and isinstance(val, dict)
+            ):
+                kwargs[name] = param.annotation(**val)
+            else:
+                kwargs[name] = val
+        else:
+            kwargs[name] = resolve_unknown_param(param, cache)
 
     return await run_with_lifespan_handling(dependant.call, kwargs, context)
