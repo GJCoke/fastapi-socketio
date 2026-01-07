@@ -166,31 +166,40 @@ class AsyncServer(SocketIOAsyncServer):
         self, sid: str, room: str, namespace: Optional[str] = None
     ) -> Awaitable[None]:
         """Add a client to a room."""
-        return super().enter_room(sid=sid, room=room, namespace=namespace)
+        return await super().enter_room(sid=sid, room=room, namespace=namespace)
 
     async def leave_room(
         self, sid: str, room: str, namespace: Optional[str] = None
     ) -> Awaitable[None]:
         """Remove a client from a room."""
-        return super().leave_room(sid=sid, room=room, namespace=namespace)
+        return await super().leave_room(sid=sid, room=room, namespace=namespace)
 
     async def close_room(
         self, room: str, namespace: Optional[str] = None
     ) -> Awaitable[None]:
         """Close a room."""
-        return super().close_room(room=room, namespace=namespace)
+        return await super().close_room(room=room, namespace=namespace)
 
     async def disconnect(
         self, sid: str, namespace: Optional[str] = None, ignore_queue: bool = False
     ) -> Awaitable[None]:
         """Disconnect a client."""
-        return super().disconnect(
+        return await super().disconnect(
             sid=sid, namespace=namespace, ignore_queue=ignore_queue
         )
 
     async def sleep(self, seconds: int = 0) -> Awaitable[None]:
         """Sleep for a given number of seconds."""
-        return super().sleep(seconds=seconds)
+        return await super().sleep(seconds=seconds)
+
+    def instrument(self, auth=None, mode='development', read_only=False,
+                   server_id=None, namespace='/admin',
+                   server_stats_interval=2):
+        """Instrument the Socket.IO server for monitoring with the `Socket.IO Admin UI <https://socket.io/docs/v4/admin-ui/>`_."""
+        from .async_admin import InstrumentedAsyncServer
+        return InstrumentedAsyncServer(self, auth=auth, mode=mode, read_only=read_only,
+                                       server_id=server_id, namespace=namespace,
+                                       server_stats_interval=server_stats_interval)
 
     async def _trigger_event(
         self,
@@ -229,6 +238,8 @@ class AsyncServer(SocketIOAsyncServer):
             environ = args[1]
             auth = args[2] if len(args) > 2 else None
             return handler(sid, auth, environ=environ)
+        elif event == "disconnect":
+            return handler(*args[:-1])
         else:
             return handler(*args)
 

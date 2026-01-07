@@ -209,7 +209,9 @@ async def solve_dependency(
 
 
 async def solve_dependant(
-    dependant: Dependant, context: LifespanContext, cache: dict
+    dependant: Dependant,
+    context: LifespanContext,
+    cache: dict,
 ) -> Any:
     """
     Entry point for resolving the main event handler's dependencies.
