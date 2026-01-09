@@ -16,6 +16,10 @@ class InstrumentedAsyncServer(SocketIOInstrumentedAsyncServer):
         super().__init__(*args, **kwargs)
         self._stats_task_running = False
 
+        # 当服务器初始化此类后就应该开始任务, 否则后台时间不准确, 且在分布式时存在问题
+        self.stop_stats_event = self.sio.eio.create_event()
+        self.stats_task = self.sio.start_background_task(self._emit_server_stats)
+
     async def admin_connect(self, sid: SID, environ: Environ, client_auth: Any):
         return await super().admin_connect(sid=sid, environ=environ, client_auth=client_auth)
 
@@ -35,10 +39,6 @@ class InstrumentedAsyncServer(SocketIOInstrumentedAsyncServer):
 
             while not self.stop_stats_event.is_set():
                 await self.sio.sleep(self.server_stats_interval)
-
-                # 检查是否还有管理员在监听，如果没有可以考虑退出（可选优化）
-                if not self.sio.manager.rooms.get(self.admin_namespace, {}).get(None):
-                    break
 
                 await self.sio.emit(
                     "server_stats",
