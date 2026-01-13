@@ -34,10 +34,11 @@ class InstrumentedAsyncServer(SocketIOInstrumentedAsyncServer):
         self._stats_task_running = True
         try:
             start_time = time.time()
-            namespaces = list(self.sio.handlers.keys())
-            namespaces.sort()
 
             while not self.stop_stats_event.is_set():
+                namespaces = list(self.sio.handlers.keys())
+                namespaces.sort()
+
                 await self.sio.sleep(self.server_stats_interval)
 
                 await self.sio.emit(
