@@ -11,7 +11,6 @@ from .params import SID, Environ
 
 
 class InstrumentedAsyncServer(SocketIOInstrumentedAsyncServer):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._stats_task_running = False
@@ -21,10 +20,14 @@ class InstrumentedAsyncServer(SocketIOInstrumentedAsyncServer):
         self.stats_task = self.sio.start_background_task(self._emit_server_stats)
 
     async def admin_connect(self, sid: SID, environ: Environ, client_auth: Any):
-        return await super().admin_connect(sid=sid, environ=environ, client_auth=client_auth)
+        return await super().admin_connect(
+            sid=sid, environ=environ, client_auth=client_auth
+        )
 
-    async def admin_disconnect(self, namespace, close, sid, room_filter=None):
-        await self.sio.disconnect(sid=sid, namespace=namespace)
+    async def admin_disconnect(self, _, namespace, close, room_filter=None):
+        for sid, _ in self.sio.manager.get_participants(namespace, room_filter):
+            if close:
+                await self.sio.disconnect(sid=sid, namespace=namespace)
 
     async def _emit_server_stats(self):
         """重写统计信息推送逻辑，确保全局只有一个协程在跑"""
@@ -37,6 +40,7 @@ class InstrumentedAsyncServer(SocketIOInstrumentedAsyncServer):
             namespaces = list(self.sio.handlers.keys())
             namespaces.sort()
 
+            assert self.stop_stats_event is not None
             while not self.stop_stats_event.is_set():
                 await self.sio.sleep(self.server_stats_interval)
 

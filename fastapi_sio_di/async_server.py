@@ -1,6 +1,6 @@
 import asyncio
 from functools import wraps
-from typing import Any, Callable, Optional, Union, overload, TypeVar, Awaitable
+from typing import Any, Callable, Optional, Union, overload, TypeVar
 from pydantic import BaseModel
 
 from .dependencies import Dependant, LifespanContext, solve_dependant
@@ -33,6 +33,7 @@ class AsyncServer(SocketIOAsyncServer):
         if cors_allowed_origins is not None and "*" in cors_allowed_origins:
             cors_allowed_origins = "*"
         self.serializer = serializer
+        self.dependency_overrides: dict[Callable, Callable] = {}
         super().__init__(cors_allowed_origins=cors_allowed_origins, **kwargs)
 
     def on(
@@ -56,7 +57,6 @@ class AsyncServer(SocketIOAsyncServer):
 
             @wraps(func)
             async def wrapper(sid: str, *args: Any, **kwargs: Any) -> None:
-                context = LifespanContext()
                 cache: dict[str, Any] = {}
 
                 data = args[0] if args else None
@@ -69,11 +69,13 @@ class AsyncServer(SocketIOAsyncServer):
                 cache["__args__"] = args
                 cache["__kwargs__"] = kwargs
 
-                try:
-                    return await solve_dependant(dependant, context, cache)
-
-                finally:
-                    await context.run_teardowns()
+                async with LifespanContext() as context:
+                    return await solve_dependant(
+                        dependant,
+                        context,
+                        cache,
+                        overrides=self.dependency_overrides,
+                    )
 
             super(AsyncServer, self).on(
                 event=event, handler=wrapper, namespace=namespace
@@ -86,14 +88,13 @@ class AsyncServer(SocketIOAsyncServer):
         self,
         event: str,
         data: Optional[Any] = None,
-        *,
         to: Optional[str] = None,
         room: Optional[str] = None,
         skip_sid: Optional[Union[str, list[str]]] = None,
         namespace: Optional[str] = None,
         callback: Optional[Callable] = None,
         ignore_queue: bool = False,
-    ) -> Awaitable[None]:
+    ) -> None:
         """
         Emit an event to one or more connected clients.
         Automatically serializes Pydantic models to dictionaries.
@@ -122,14 +123,13 @@ class AsyncServer(SocketIOAsyncServer):
     async def send(
         self,
         data: Any,
-        *,
         to: Optional[str] = None,
         room: Optional[str] = None,
         skip_sid: Optional[Union[str, list[str]]] = None,
         namespace: Optional[str] = None,
         callback: Optional[Callable] = None,
         ignore_queue: bool = False,
-    ) -> Awaitable[None]:
+    ) -> None:
         """Send a 'message' event to clients."""
         return await self.emit(
             "message",
@@ -146,13 +146,12 @@ class AsyncServer(SocketIOAsyncServer):
         self,
         event: str,
         data: Optional[Any] = None,
-        *,
         to: Optional[str] = None,
         sid: Optional[str] = None,
         namespace: Optional[str] = None,
         timeout: int = 60,
         ignore_queue: bool = False,
-    ) -> Awaitable[None]:
+    ) -> None:
         """Emit a custom event to a client and wait for the response."""
         return await super().call(
             event=event,
@@ -166,49 +165,62 @@ class AsyncServer(SocketIOAsyncServer):
 
     async def enter_room(
         self, sid: str, room: str, namespace: Optional[str] = None
-    ) -> Awaitable[None]:
+    ) -> None:
         """Add a client to a room."""
         return await super().enter_room(sid=sid, room=room, namespace=namespace)
 
     async def leave_room(
         self, sid: str, room: str, namespace: Optional[str] = None
-    ) -> Awaitable[None]:
+    ) -> None:
         """Remove a client from a room."""
         return await super().leave_room(sid=sid, room=room, namespace=namespace)
 
     async def close_room(
         self, room: str, namespace: Optional[str] = None
-    ) -> Awaitable[None]:
+    ) -> None:
         """Close a room."""
         return await super().close_room(room=room, namespace=namespace)
 
     async def disconnect(
         self, sid: str, namespace: Optional[str] = None, ignore_queue: bool = False
-    ) -> Awaitable[None]:
+    ) -> None:
         """Disconnect a client."""
         return await super().disconnect(
             sid=sid, namespace=namespace, ignore_queue=ignore_queue
         )
 
-    async def sleep(self, seconds: int = 0) -> Awaitable[None]:
+    async def sleep(self, seconds: int = 0) -> None:
         """Sleep for a given number of seconds."""
         return await super().sleep(seconds=seconds)
 
-    def instrument(self, auth=None, mode='development', read_only=False,
-                   server_id=None, namespace='/admin',
-                   server_stats_interval=2):
+    def instrument(
+        self,
+        auth=None,
+        mode="development",
+        read_only=False,
+        server_id=None,
+        namespace="/admin",
+        server_stats_interval=2,
+    ):
         """Instrument the Socket.IO server for monitoring with the `Socket.IO Admin UI <https://socket.io/docs/v4/admin-ui/>`_."""
         from .async_admin import InstrumentedAsyncServer
-        return InstrumentedAsyncServer(self, auth=auth, mode=mode, read_only=read_only,
-                                       server_id=server_id, namespace=namespace,
-                                       server_stats_interval=server_stats_interval)
+
+        return InstrumentedAsyncServer(
+            self,
+            auth=auth,
+            mode=mode,
+            read_only=read_only,
+            server_id=server_id,
+            namespace=namespace,
+            server_stats_interval=server_stats_interval,
+        )
 
     async def _trigger_event(
         self,
         event: str,
         namespace: str,
         *args: Any,
-    ) -> Optional[Awaitable[None]]:
+    ) -> Any:
         """Invoke an application event handler."""
         handler, args = self._get_event_handler(event, namespace, args)
         if handler:
@@ -233,7 +245,7 @@ class AsyncServer(SocketIOAsyncServer):
         handler: Callable,
         event: str,
         args: tuple,
-    ) -> Union[Callable, Awaitable[Callable]]:
+    ) -> Any:
         """Call an application event handler."""
         if event == "connect":
             sid = args[0]
@@ -261,5 +273,5 @@ class AsyncServer(SocketIOAsyncServer):
             # Default fallback to model_dump (Pydantic V2) or dict (Pydantic V1)
             if hasattr(data, "model_dump"):
                 return data.model_dump()
-            return data.dict()  # type: ignore
+            return data.dict()
         return data

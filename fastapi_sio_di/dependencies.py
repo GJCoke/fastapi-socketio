@@ -1,22 +1,52 @@
+import asyncio
 import inspect
+from contextlib import AsyncExitStack, asynccontextmanager
 from functools import lru_cache
-from typing import Any, Awaitable, Callable, Dict, Optional, Tuple, List
+from typing import (
+    Annotated,
+    Any,
+    Callable,
+    Dict,
+    Optional,
+    Tuple,
+    List,
+    get_args,
+    get_origin,
+)
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
+from fastapi.params import Depends
+from .exceptions import SocketIOValidationError
 from .params import SID, Environ
 from .utils import get_param_depend
 
 
 class LifespanContext:
-    """Manages teardown functions for async/generator dependencies."""
+    """Manages teardown functions for async/generator dependencies using AsyncExitStack.
+
+    Guarantees:
+    - All teardowns execute even if earlier ones raise
+    - Handler exceptions propagate into generator yield points
+    - LIFO teardown order
+    """
 
     def __init__(self) -> None:
-        self.teardowns: List[Callable[[], Awaitable[None]]] = []
+        self._stack = AsyncExitStack()
+
+    async def __aenter__(self):
+        await self._stack.__aenter__()
+        return self
+
+    async def __aexit__(self, *exc_info):
+        return await self._stack.__aexit__(*exc_info)
+
+    async def enter_async_context(self, cm):
+        """Enter an async context manager; cleanup registered automatically."""
+        return await self._stack.enter_async_context(cm)
 
     async def run_teardowns(self) -> None:
-        """Run all registered teardown callbacks in reverse order."""
-        for cleanup in reversed(self.teardowns):
-            await cleanup()
+        """Backward-compatible teardown method. Closes the stack."""
+        await self._stack.aclose()
 
 
 class DependencySignature:
@@ -31,6 +61,24 @@ class DependencySignature:
         # Analyze parameters once during initialization
         for name, param in self.sig.parameters.items():
             if dep := get_param_depend(param):
+                # Handle Depends() with no argument: infer callable from annotation
+                if dep.dependency is None:
+                    annotation = param.annotation
+                    if get_origin(annotation) is Annotated:
+                        annotation = get_args(annotation)[0]
+                    try:
+                        if (
+                            callable(annotation)
+                            and annotation is not inspect.Parameter.empty
+                        ):
+                            inspect.signature(annotation)
+                            dep = Depends(annotation, use_cache=dep.use_cache)
+                        else:
+                            self.params[name] = ("unknown", param)
+                            continue
+                    except (ValueError, TypeError):
+                        self.params[name] = ("unknown", param)
+                        continue
                 self.params[name] = ("depend", dep)
             elif param.annotation in (SID, Environ):
                 self.params[name] = ("special", param)
@@ -100,9 +148,30 @@ def resolve_unknown_param(param: inspect.Parameter, cache: Dict[str, Any]) -> An
             return data
         # If data is a dict, try to instantiate the model
         if isinstance(data, dict):
-            return annotation(**data)
+            try:
+                return annotation(**data)
+            except ValidationError as e:
+                raise SocketIOValidationError(
+                    errors=e.errors(), model_name=annotation.__name__
+                ) from e
 
     return data
+
+
+def _sync_next(gen):
+    """Wrap next() to avoid StopIteration escaping into futures."""
+    try:
+        return (next(gen),)
+    except StopIteration:
+        return None
+
+
+def _sync_throw(gen, exc):
+    """Wrap generator.throw() to avoid StopIteration escaping into futures."""
+    try:
+        gen.throw(type(exc), exc, exc.__traceback__)
+    except StopIteration:
+        pass
 
 
 async def run_with_lifespan_handling(
@@ -111,33 +180,48 @@ async def run_with_lifespan_handling(
     context: LifespanContext,
 ) -> Any:
     """
-    Run a function and register teardown callbacks if it returns a generator.
+    Run a function and register teardown via AsyncExitStack if it's a generator.
     """
     result = func(**kwargs)
 
     if inspect.isasyncgen(result):
-        value = await result.__anext__()
 
-        async def cleanup() -> None:
+        @asynccontextmanager
+        async def _wrap():
+            value = await result.__anext__()
             try:
-                await result.__anext__()
-            except StopAsyncIteration:
-                pass
+                yield value
+            except BaseException as exc:
+                try:
+                    await result.athrow(exc)
+                except StopAsyncIteration:
+                    pass
+                raise
+            else:
+                try:
+                    await result.__anext__()
+                except StopAsyncIteration:
+                    pass
 
-        context.teardowns.append(cleanup)
-        return value
+        return await context.enter_async_context(_wrap())
 
     elif inspect.isgenerator(result):
-        value = next(result)
 
-        async def cleanup() -> None:
+        @asynccontextmanager
+        async def _wrap():
+            ret = await asyncio.to_thread(_sync_next, result)
+            if ret is None:
+                return
+            value = ret[0]
             try:
-                next(result)
-            except StopIteration:
-                pass
+                yield value
+            except BaseException as exc:
+                await asyncio.to_thread(_sync_throw, result, exc)
+                raise
+            else:
+                await asyncio.to_thread(_sync_next, result)
 
-        context.teardowns.append(cleanup)
-        return value
+        return await context.enter_async_context(_wrap())
 
     elif inspect.iscoroutine(result):
         return await result
@@ -149,6 +233,7 @@ async def extract_kwargs_from_signature(
     func: Callable,
     context: LifespanContext,
     cache: Dict[Any, Any],
+    overrides: Optional[Dict[Callable, Callable]] = None,
 ) -> Dict[str, Any]:
     """
     Extract keyword arguments for SUB-DEPENDENCIES using cached signature analysis.
@@ -163,7 +248,11 @@ async def extract_kwargs_from_signature(
         if kind == "depend":
             # value is the dependency object (from get_param_depend)
             result = await solve_dependency(
-                value.dependency, context, cache, value.use_cache
+                value.dependency,
+                context,
+                cache,
+                value.use_cache,
+                overrides=overrides,
             )
             kwargs[name] = result
 
@@ -191,19 +280,27 @@ async def solve_dependency(
     context: LifespanContext,
     cache: Dict[Any, Any],
     use_cache: bool = True,
+    overrides: Optional[Dict[Callable, Callable]] = None,
 ) -> Any:
     """
     Resolve a dependency by recursively calling its own dependencies.
     """
-    if use_cache and func in cache:
-        return cache[func]
+    actual_func = overrides.get(func, func) if overrides else func
 
-    kwargs = await extract_kwargs_from_signature(func, context, cache)
+    if use_cache and actual_func in cache:
+        return cache[actual_func]
 
-    result = await run_with_lifespan_handling(func, kwargs, context)
+    kwargs = await extract_kwargs_from_signature(
+        actual_func,
+        context,
+        cache,
+        overrides=overrides,
+    )
+
+    result = await run_with_lifespan_handling(actual_func, kwargs, context)
 
     if use_cache:
-        cache[func] = result
+        cache[actual_func] = result
 
     return result
 
@@ -212,6 +309,7 @@ async def solve_dependant(
     dependant: Dependant,
     context: LifespanContext,
     cache: dict,
+    overrides: Optional[Dict[Callable, Callable]] = None,
 ) -> Any:
     """
     Entry point for resolving the main event handler's dependencies.
@@ -221,13 +319,20 @@ async def solve_dependant(
 
     # 1. Resolve special params (SID, Environ)
     for name, annotation in dependant.special_params.items():
-        key = f"__{annotation.__name__.lower()}__"
-        kwargs[name] = cache.get(key)
+        if annotation is Environ:
+            kwargs[name] = cache.get("__environ__")
+        else:
+            key = f"__{annotation.__name__.lower()}__"
+            kwargs[name] = cache.get(key)
 
     # 2. Resolve FastAPI dependencies
     for name, dep in dependant.dependencies.items():
         kwargs[name] = await solve_dependency(
-            dep.dependency, context, cache, dep.use_cache
+            dep.dependency,
+            context,
+            cache,
+            dep.use_cache,
+            overrides=overrides,
         )
 
     # 3. Inject the main data payload
@@ -241,7 +346,12 @@ async def solve_dependant(
                 and issubclass(param.annotation, BaseModel)
                 and isinstance(val, dict)
             ):
-                kwargs[name] = param.annotation(**val)
+                try:
+                    kwargs[name] = param.annotation(**val)
+                except ValidationError as e:
+                    raise SocketIOValidationError(
+                        errors=e.errors(), model_name=param.annotation.__name__
+                    ) from e
             else:
                 kwargs[name] = val
         else:
