@@ -300,8 +300,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 80px;
-  padding: 6px 15px;
+  width: 80px;
+  padding: 6px 0;
   font-size: 14px;
   font-weight: 700;
   text-transform: uppercase;
@@ -311,6 +311,7 @@ body {
   flex-shrink: 0;
   font-family: var(--sw-font);
   text-shadow: 0 1px 0 rgba(0,0,0,0.1);
+  letter-spacing: 0.03em;
 }
 .op-method.emit { background: var(--sw-green); }
 .op-method.connect { background: var(--sw-orange); }
@@ -783,7 +784,7 @@ body {
   .topbar-inner { gap: 10px; }
   .topbar-conn input { width: 120px; }
   .info-title { font-size: 26px; }
-  .op-method { min-width: auto; font-size: 12px; padding: 4px 10px; margin: 0 8px; }
+  .op-method { width: 62px; font-size: 12px; padding: 4px 0; margin: 0 8px; }
   .op-path { font-size: 14px; }
   .op-summary { display: none; }
   .schema-block { font-size: 11px; padding: 10px 14px; }
@@ -946,8 +947,8 @@ function buildOperation(ev, ns) {
 }
 
 function getBadge(ev) {
-  if (ev.is_connect) return { label: "CONNECT", cls: "connect", bgCls: "orange-bg", bodyCls: "orange-body" };
-  if (ev.is_disconnect) return { label: "DISCONNECT", cls: "disconnect", bgCls: "red-bg", bodyCls: "red-body" };
+  if (ev.is_connect) return { label: "CONN", cls: "connect", bgCls: "orange-bg", bodyCls: "orange-body" };
+  if (ev.is_disconnect) return { label: "DISC", cls: "disconnect", bgCls: "red-bg", bodyCls: "red-body" };
   return { label: "EMIT", cls: "emit", bgCls: "emit-bg", bodyCls: "emit-body" };
 }
 
