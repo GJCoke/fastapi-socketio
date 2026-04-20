@@ -353,3 +353,14 @@ class TestSetupDocs:
 
         html = client.get("/sio-docs").text
         assert "My API" in html
+
+
+class TestPublicAPI:
+    def test_eventdoc_importable_from_package(self):
+        from fastapi_sio_di import EventDoc
+        assert EventDoc is not None
+
+    def test_setup_docs_accessible_on_server(self):
+        sio = AsyncServer()
+        assert hasattr(sio, "setup_docs")
+        assert callable(sio.setup_docs)
