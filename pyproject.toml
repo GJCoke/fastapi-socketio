@@ -1,6 +1,6 @@
 [project]
 name = "fastapi-sio-di"
-version = "0.4.0"
+version = "0.5.0"
 description = "FastAPI-SIO-DI is a library tailored for integrating Socket.IO with FastAPI. It allows you to develop real-time WebSocket applications using the familiar FastAPI style (Dependency Injection, Pydantic models)."
 requires-python = ">=3.10"
 dependencies = [
@@ -18,3 +18,58 @@ dev = [
     "starlette>=0.45.0",
     "httpx>=0.28.0",
 ]
+
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+indent-width = 4
+
+# Directories or files that do not need to be checked.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    ".idea",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+    "apps/backend/src/locales/types.py",
+    "apps/backend/alembic",
+    "**/tests/",
+    "**/migrations/"
+]
+
+[tool.ruff.lint]
+select = [
+    "F",
+    "E",
+    "W",
+    "I001",
+]
+ignore = ["E501"]
+per-file-ignores = { }
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
