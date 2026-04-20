@@ -6,361 +6,729 @@
 <title>{{title}}</title>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
+:root {
+  --sw-green: #49cc90;
+  --sw-green-bg: rgba(73,204,144,0.1);
+  --sw-green-border: #49cc90;
+  --sw-orange: #fca130;
+  --sw-orange-bg: rgba(252,161,48,0.1);
+  --sw-orange-border: #fca130;
+  --sw-red: #f93e3e;
+  --sw-red-bg: rgba(249,62,62,0.1);
+  --sw-red-border: #f93e3e;
+  --sw-blue: #61affe;
+  --sw-blue-bg: rgba(97,175,254,0.1);
+  --sw-blue-border: #61affe;
+  --sw-topbar: #1b1b1b;
+  --sw-info-bg: #fafafa;
+  --sw-bg: #fafafa;
+  --sw-white: #fff;
+  --sw-border: #d8dde7;
+  --sw-text: #3b4151;
+  --sw-text-secondary: #6b6b6b;
+  --sw-text-light: #999;
+  --sw-execute: #4990e2;
+  --sw-execute-hover: #357abd;
+  --sw-cancel: #ff6060;
+  --sw-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --sw-font-mono: "Source Code Pro", "SF Mono", Monaco, Consolas, "Liberation Mono", monospace;
+  --sw-radius: 4px;
+  --sw-shadow: 0 1px 2px 0 rgba(0,0,0,0.15);
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
+
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #f8f9fa;
-  color: #212529;
+  font-family: var(--sw-font);
+  background: var(--sw-bg);
+  color: var(--sw-text);
+  font-size: 14px;
   line-height: 1.5;
 }
 
-/* Header */
-.header {
-  background: #fff;
-  border-bottom: 1px solid #dee2e6;
-  padding: 12px 24px;
+/* ═══════ Topbar ═══════ */
+.topbar {
+  background: var(--sw-topbar);
+  padding: 8px 0;
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
 }
-.header h1 { font-size: 1.25rem; font-weight: 600; }
-.version-badge {
-  background: #0d6efd;
+.topbar-inner {
+  width: 100%;
+  max-width: 1460px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.topbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+}
+.topbar-logo svg { width: 22px; height: 22px; }
+.topbar-logo span {
   color: #fff;
-  font-size: 0.75rem;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
-/* Connection bar */
-.connection-bar {
-  background: #fff;
-  border-bottom: 1px solid #dee2e6;
-  padding: 10px 24px;
+/* Connection controls in topbar */
+.topbar-conn {
+  margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 8px;
 }
-.connection-bar label { font-size: 0.85rem; font-weight: 500; }
-.connection-bar input,
-.connection-bar select {
-  padding: 6px 10px;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  font-size: 0.85rem;
-}
-.connection-bar input { width: 260px; }
-.btn {
-  padding: 6px 14px;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  cursor: pointer;
+.topbar-conn label {
+  color: #aaa;
+  font-size: 12px;
   font-weight: 500;
 }
-.btn-primary { background: #0d6efd; color: #fff; }
-.btn-primary:hover { background: #0b5ed7; }
-.btn-danger { background: #dc3545; color: #fff; }
-.btn-danger:hover { background: #bb2d3b; }
-.btn-secondary { background: #6c757d; color: #fff; }
-.btn-secondary:hover { background: #5c636a; }
-.status-dot {
-  width: 10px; height: 10px;
+.topbar-conn input,
+.topbar-conn select {
+  background: #333;
+  border: 1px solid #555;
+  color: #eee;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-family: var(--sw-font-mono);
+  outline: none;
+}
+.topbar-conn input:focus,
+.topbar-conn select:focus { border-color: var(--sw-green); }
+.topbar-conn input { width: 200px; }
+.topbar-conn select { min-width: 70px; }
+.conn-btn {
+  padding: 4px 12px;
+  border: 2px solid var(--sw-green);
+  background: transparent;
+  color: var(--sw-green);
+  border-radius: 3px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.conn-btn:hover { background: var(--sw-green); color: #fff; }
+.conn-btn.connected {
+  border-color: var(--sw-red);
+  color: var(--sw-red);
+}
+.conn-btn.connected:hover { background: var(--sw-red); color: #fff; }
+.conn-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.conn-dot {
+  width: 8px; height: 8px;
   border-radius: 50%;
-  background: #dc3545;
-  display: inline-block;
+  background: var(--sw-red);
 }
-.status-dot.connected { background: #198754; }
+.conn-dot.on { background: var(--sw-green); }
+.conn-status-text { color: #aaa; font-size: 11px; }
 
-/* Main content */
-.main { max-width: 1100px; margin: 24px auto; padding: 0 24px; }
+/* ═══════ Info Section ═══════ */
+.info-section {
+  background: var(--sw-info-bg);
+  padding: 30px 0 20px;
+  border-bottom: 1px solid var(--sw-border);
+}
+.info-inner {
+  max-width: 1460px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+.info-title {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--sw-text);
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+.info-title small {
+  font-size: 13px;
+  font-weight: 500;
+  background: #89bf04;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 20px;
+  vertical-align: middle;
+  margin-left: 8px;
+  position: relative;
+  top: -4px;
+}
+.info-base-url {
+  font-size: 14px;
+  color: var(--sw-text-secondary);
+  margin-top: 8px;
+}
+.info-base-url a {
+  color: var(--sw-text);
+  font-weight: 500;
+  text-decoration: none;
+}
+.info-base-url code {
+  font-family: var(--sw-font-mono);
+  font-size: 13px;
+  color: var(--sw-text);
+}
 
-/* Namespace group */
-.namespace-group { margin-bottom: 20px; }
-.namespace-header {
-  font-size: 1rem;
-  font-weight: 600;
-  padding: 10px 0;
-  border-bottom: 2px solid #0d6efd;
+/* ═══════ Main Content ═══════ */
+.swagger-ui {
+  max-width: 1460px;
+  margin: 0 auto;
+  padding: 20px 20px 60px;
+}
+
+/* ═══════ Tag Group (Namespace) ═══════ */
+.tag-group {
   margin-bottom: 10px;
-  cursor: pointer;
-  user-select: none;
+  border: 1px solid var(--sw-border);
+  border-radius: var(--sw-radius);
+  background: var(--sw-white);
 }
-.namespace-header::before { content: "\25BC "; font-size: 0.7rem; }
-.namespace-header.collapsed::before { content: "\25B6 "; }
-.namespace-body.hidden { display: none; }
-
-/* Event card */
-.event-card {
-  background: #fff;
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
-  margin-bottom: 8px;
-  overflow: hidden;
-}
-.event-card-header {
-  padding: 10px 14px;
-  cursor: pointer;
+.tag-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  padding: 12px 20px;
+  cursor: pointer;
   user-select: none;
+  border-bottom: 1px solid transparent;
+  transition: background 0.15s;
 }
-.event-card-header:hover { background: #f8f9fa; }
-.type-badge {
-  font-size: 0.7rem;
+.tag-header:hover { background: rgba(0,0,0,0.02); }
+.tag-group.open > .tag-header { border-bottom-color: var(--sw-border); }
+.tag-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--sw-text);
+}
+.tag-count {
+  font-size: 12px;
+  color: var(--sw-text-light);
+  margin-left: 10px;
+}
+.tag-arrow {
+  margin-left: auto;
+  font-size: 18px;
+  color: var(--sw-text-light);
+  transition: transform 0.2s;
+}
+.tag-group.open > .tag-header .tag-arrow { transform: rotate(180deg); }
+.tag-body { display: none; }
+.tag-group.open > .tag-body { display: block; }
+
+/* ═══════ Operation (Event Card) ═══════ */
+.operation {
+  border-bottom: 1px solid var(--sw-border);
+}
+.operation:last-child { border-bottom: none; }
+
+/* --- Collapsed header --- */
+.op-header {
+  display: flex;
+  align-items: center;
+  padding: 5px 20px 5px 0;
+  cursor: pointer;
+  user-select: none;
+  gap: 0;
+  min-height: 48px;
+  transition: background 0.15s;
+}
+
+/* Color band on left */
+.op-method {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  padding: 6px 0;
+  font-size: 14px;
   font-weight: 700;
   text-transform: uppercase;
-  padding: 2px 8px;
-  border-radius: 3px;
   color: #fff;
-  min-width: 70px;
-  text-align: center;
+  border-radius: 3px;
+  margin: 5px 15px 5px 20px;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
 }
-.type-badge.emit { background: #198754; }
-.type-badge.connect { background: #fd7e14; }
-.type-badge.disconnect { background: #dc3545; }
-.event-name { font-weight: 600; font-size: 0.9rem; }
-.event-summary { color: #6c757d; font-size: 0.85rem; margin-left: auto; }
-.event-card-body { display: none; padding: 14px; border-top: 1px solid #dee2e6; }
-.event-card.expanded .event-card-body { display: block; }
+.op-method.emit { background: var(--sw-green); }
+.op-method.connect { background: var(--sw-orange); }
+.op-method.disconnect { background: var(--sw-red); }
 
-/* Schema panels */
-.schema-panels {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin-bottom: 14px;
+.op-header.emit-bg { background: var(--sw-green-bg); border: 1px solid var(--sw-green-border); border-left: none; border-right: none; }
+.op-header.orange-bg { background: var(--sw-orange-bg); border: 1px solid var(--sw-orange-border); border-left: none; border-right: none; }
+.op-header.red-bg { background: var(--sw-red-bg); border: 1px solid var(--sw-red-border); border-left: none; border-right: none; }
+
+.op-path {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--sw-text);
+  flex-shrink: 0;
 }
-@media (max-width: 700px) { .schema-panels { grid-template-columns: 1fr; } }
-.schema-panel h4 {
-  font-size: 0.8rem;
+.op-summary {
+  font-size: 13px;
+  color: var(--sw-text-secondary);
+  margin-left: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.op-expand {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 4px 8px;
+  font-size: 10px;
+  color: var(--sw-text-light);
+  transition: transform 0.2s;
+}
+.operation.open .op-expand { transform: rotate(180deg); }
+
+/* --- Expanded body --- */
+.op-body {
+  display: none;
+  padding: 20px;
+  border-top: none;
+}
+.operation.open .op-body { display: block; }
+
+.op-body.emit-body { background: var(--sw-green-bg); }
+.op-body.orange-body { background: var(--sw-orange-bg); }
+.op-body.red-body { background: var(--sw-red-bg); }
+
+/* Description */
+.op-desc {
+  font-size: 14px;
+  color: var(--sw-text-secondary);
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+/* ═══════ Parameters Section ═══════ */
+.section-title {
+  font-size: 12px;
+  font-weight: 700;
   text-transform: uppercase;
-  color: #6c757d;
-  margin-bottom: 6px;
+  letter-spacing: 0.1em;
+  color: var(--sw-text);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--sw-border);
+  margin-bottom: 0;
 }
-.schema-panel pre {
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  padding: 10px;
-  font-size: 0.8rem;
-  overflow-x: auto;
-  white-space: pre-wrap;
-}
-.schema-panel .no-data { color: #6c757d; font-style: italic; font-size: 0.85rem; }
 
-/* Params table */
 .params-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.82rem;
-  margin-bottom: 14px;
 }
-.params-table th, .params-table td {
+.params-table th {
   text-align: left;
-  padding: 5px 8px;
-  border-bottom: 1px solid #dee2e6;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sw-text-secondary);
+  border-bottom: 1px solid var(--sw-border);
+  background: rgba(0,0,0,0.02);
 }
-.params-table th { font-weight: 600; color: #6c757d; }
-.required-mark { color: #dc3545; font-weight: 700; }
+.params-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  font-size: 13px;
+  vertical-align: top;
+}
+.params-table tr:last-child td { border-bottom: none; }
+.param-name { font-weight: 600; color: var(--sw-text); }
+.param-name .required {
+  color: var(--sw-red);
+  font-size: 10px;
+  font-weight: 700;
+  display: block;
+  margin-top: 2px;
+}
+.param-type {
+  font-family: var(--sw-font-mono);
+  font-size: 12px;
+  color: var(--sw-text-secondary);
+}
 
-/* Try-it-out */
-.try-panel { border-top: 1px solid #dee2e6; padding-top: 14px; }
-.try-panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; }
-.try-panel textarea {
+/* Request body (schema preview) */
+.schema-section { margin-top: 16px; }
+.schema-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--sw-border);
+}
+.schema-title-row .section-title { border-bottom: none; padding: 0; margin: 0; }
+.schema-model-name {
+  font-family: var(--sw-font-mono);
+  font-size: 12px;
+  color: var(--sw-text-secondary);
+  background: rgba(0,0,0,0.05);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.schema-block {
+  background: var(--sw-white);
+  border: 1px solid var(--sw-border);
+  border-radius: var(--sw-radius);
+  padding: 14px 16px;
+  font-family: var(--sw-font-mono);
+  font-size: 13px;
+  line-height: 1.8;
+  margin-top: 8px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+.s-bracket { color: var(--sw-text-light); }
+.s-key { color: #e06c75; }
+.s-type { color: #61aeee; }
+.s-required { color: var(--sw-red); font-size: 10px; font-weight: 600; }
+.s-optional { color: #bbb; font-size: 10px; }
+
+/* ═══════ Responses Section ═══════ */
+.responses-section { margin-top: 20px; }
+.response-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+.response-code {
+  font-weight: 700;
+  font-size: 14px;
+  min-width: 60px;
+  color: var(--sw-text);
+}
+.response-desc {
+  font-size: 13px;
+  color: var(--sw-text-secondary);
+  flex: 1;
+}
+.no-data { color: var(--sw-text-light); font-style: italic; }
+
+/* ═══════ Try It Out ═══════ */
+.try-btn {
+  padding: 5px 18px;
+  border: 2px solid var(--sw-text-secondary);
+  background: transparent;
+  color: var(--sw-text-secondary);
+  border-radius: var(--sw-radius);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  float: right;
+}
+.try-btn:hover { background: var(--sw-text-secondary); color: #fff; }
+.try-btn.active {
+  border-color: var(--sw-cancel);
+  color: var(--sw-cancel);
+}
+.try-btn.active:hover { background: var(--sw-cancel); color: #fff; }
+
+.try-editor {
+  display: none;
+  margin-top: 12px;
+}
+.try-editor.visible { display: block; }
+.try-editor label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sw-text-secondary);
+  display: block;
+  margin-bottom: 4px;
+}
+.try-editor textarea {
   width: 100%;
-  min-height: 80px;
-  padding: 8px;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  font-family: monospace;
-  font-size: 0.82rem;
+  min-height: 100px;
+  padding: 10px;
+  border: 1px solid var(--sw-border);
+  border-radius: var(--sw-radius);
+  font-family: var(--sw-font-mono);
+  font-size: 13px;
+  line-height: 1.5;
   resize: vertical;
-  margin-bottom: 8px;
+  background: var(--sw-white);
+  color: var(--sw-text);
+  outline: none;
 }
-.try-panel .btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
-.event-log {
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  padding: 8px;
-  max-height: 200px;
+.try-editor textarea:focus { border-color: var(--sw-blue); box-shadow: 0 0 0 3px rgba(97,175,254,0.15); }
+.try-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.execute-btn {
+  padding: 8px 40px;
+  background: var(--sw-execute);
+  color: #fff;
+  border: none;
+  border-radius: var(--sw-radius);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--sw-shadow);
+}
+.execute-btn:hover { background: var(--sw-execute-hover); }
+.cancel-try-btn {
+  padding: 8px 20px;
+  background: transparent;
+  border: 2px solid #aaa;
+  color: var(--sw-text-secondary);
+  border-radius: var(--sw-radius);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cancel-try-btn:hover { background: #eee; }
+
+/* Server response */
+.server-response {
+  display: none;
+  margin-top: 16px;
+}
+.server-response.visible { display: block; }
+.response-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.response-header h5 {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.clear-response-btn {
+  font-size: 11px;
+  color: var(--sw-text-light);
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.clear-response-btn:hover { background: #f0f0f0; }
+.response-log {
+  background: #1b1b1b;
+  border-radius: var(--sw-radius);
+  padding: 12px 14px;
+  max-height: 250px;
   overflow-y: auto;
-  font-family: monospace;
-  font-size: 0.78rem;
+  font-family: var(--sw-font-mono);
+  font-size: 12px;
+  line-height: 1.7;
 }
-.event-log .log-entry { margin-bottom: 4px; }
-.log-entry .arrow-out { color: #198754; }
-.log-entry .arrow-in { color: #fd7e14; }
-.log-entry .label-emit { color: #198754; font-weight: 600; }
-.log-entry .label-ack { color: #fd7e14; font-weight: 600; }
-.log-entry .label-event { color: #dc3545; font-weight: 600; }
-.log-entry .timestamp { color: #6c757d; }
+.response-log::-webkit-scrollbar { width: 6px; }
+.response-log::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+.response-log .log-entry { margin-bottom: 2px; }
+.response-log .ts { color: #666; }
+.response-log .arr-out { color: #49cc90; }
+.response-log .arr-in { color: #fca130; }
+.response-log .lbl-emit { color: #49cc90; font-weight: 600; }
+.response-log .lbl-ack { color: #61affe; font-weight: 600; }
+.response-log .lbl-event { color: #f93e3e; font-weight: 600; }
+.response-log .lbl-err { color: #f93e3e; font-weight: 600; }
+.response-log .ev-name { color: #e5e7eb; font-weight: 500; }
+.response-log .ev-data { color: #9ca3af; }
+
+/* ═══════ Loading ═══════ */
+.loading { text-align: center; padding: 60px; color: var(--sw-text-light); font-size: 15px; }
+.loading::before { content: ""; display: inline-block; width: 20px; height: 20px; border: 2px solid #ddd; border-top-color: var(--sw-execute); border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 10px; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ═══════ Responsive ═══════ */
+@media (max-width: 768px) {
+  .topbar-conn input { width: 140px; }
+  .info-title { font-size: 26px; }
+  .op-method { min-width: 60px; font-size: 12px; margin: 5px 10px 5px 10px; }
+  .op-path { font-size: 14px; }
+  .schema-block { font-size: 12px; }
+}
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>{{title}}</h1>
-  <span class="version-badge" id="version-badge"></span>
+<!-- ═══════ Topbar ═══════ -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <a class="topbar-logo" href="#">
+      <svg viewBox="0 0 24 24" fill="#49cc90"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      <span>Socket.IO Docs</span>
+    </a>
+    <div class="topbar-conn">
+      <label>Server</label>
+      <input type="text" id="server-url" placeholder="ws://localhost:8000">
+      <label>NS</label>
+      <select id="ns-select"><option value="/">/</option></select>
+      <button class="conn-btn" id="conn-btn">Connect</button>
+      <div class="conn-status">
+        <span class="conn-dot" id="conn-dot"></span>
+        <span class="conn-status-text" id="conn-text">Offline</span>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="connection-bar">
-  <label>Server:</label>
-  <input type="text" id="server-url" placeholder="http://localhost:8000">
-  <label>Namespace:</label>
-  <select id="ns-select"><option value="/">/</option></select>
-  <button class="btn btn-primary" id="connect-btn">Connect</button>
-  <span class="status-dot" id="status-dot"></span>
+<!-- ═══════ Info Section ═══════ -->
+<div class="info-section">
+  <div class="info-inner">
+    <h1 class="info-title">{{title}} <small id="version-badge"></small></h1>
+    <div class="info-base-url" id="base-url-display"></div>
+  </div>
 </div>
 
-<div class="main" id="app"></div>
+<!-- ═══════ Main ═══════ -->
+<div class="swagger-ui" id="app">
+  <div class="loading">Loading schema...</div>
+</div>
 
 <script>
 const SCHEMA_URL = "{{schema_url}}";
 let socket = null;
 let schemaData = null;
 
-// --- Fetch and render schema ---
+/* ─── Fetch & Render ─── */
 fetch(SCHEMA_URL).then(r => r.json()).then(data => {
   schemaData = data;
   document.getElementById("version-badge").textContent = "v" + (data.version || "1.0.0");
-  document.getElementById("server-url").value = window.location.origin;
-  populateNamespaces(data);
-  renderSchema(data);
+  const origin = window.location.origin;
+  document.getElementById("server-url").value = origin;
+  document.getElementById("base-url-display").innerHTML = 'Base URL: <code>' + esc(origin) + '</code>';
+  populateNs(data);
+  render(data);
 });
 
-function populateNamespaces(data) {
+function populateNs(data) {
   const sel = document.getElementById("ns-select");
   sel.innerHTML = "";
   for (const ns of Object.keys(data.namespaces || {})) {
-    const opt = document.createElement("option");
-    opt.value = ns;
-    opt.textContent = ns;
-    sel.appendChild(opt);
+    const o = document.createElement("option");
+    o.value = ns; o.textContent = ns;
+    sel.appendChild(o);
   }
 }
 
-function renderSchema(data) {
+function render(data) {
   const app = document.getElementById("app");
   app.innerHTML = "";
-  const namespaces = data.namespaces || {};
-  for (const [ns, nsData] of Object.entries(namespaces)) {
-    const group = document.createElement("div");
-    group.className = "namespace-group";
-
-    const header = document.createElement("div");
-    header.className = "namespace-header";
-    header.textContent = ns;
-    header.addEventListener("click", () => {
-      header.classList.toggle("collapsed");
-      body.classList.toggle("hidden");
-    });
-
-    const body = document.createElement("div");
-    body.className = "namespace-body";
-
-    for (const ev of (nsData.events || [])) {
-      body.appendChild(buildEventCard(ev, ns));
-    }
-
-    group.appendChild(header);
-    group.appendChild(body);
-    app.appendChild(group);
+  for (const [ns, nsData] of Object.entries(data.namespaces || {})) {
+    app.appendChild(buildTagGroup(ns, nsData.events || []));
   }
 }
 
-function getTypeBadge(ev) {
-  if (ev.is_connect) return { label: "CONNECT", cls: "connect" };
-  if (ev.is_disconnect) return { label: "DISCONNECT", cls: "disconnect" };
-  return { label: "EMIT", cls: "emit" };
-}
+/* ─── Tag Group ─── */
+function buildTagGroup(ns, events) {
+  const group = document.createElement("div");
+  group.className = "tag-group open";
 
-function buildEventCard(ev, ns) {
-  const card = document.createElement("div");
-  card.className = "event-card";
+  const header = document.createElement("div");
+  header.className = "tag-header";
+  header.innerHTML = `<span class="tag-name">${esc(ns === "/" ? "default" : ns)}</span><span class="tag-count">${events.length} event${events.length !== 1 ? "s" : ""}</span><span class="tag-arrow">▾</span>`;
+  header.onclick = () => group.classList.toggle("open");
 
-  const badge = getTypeBadge(ev);
-
-  // Header
-  const hdr = document.createElement("div");
-  hdr.className = "event-card-header";
-  hdr.innerHTML = `
-    <span class="type-badge ${badge.cls}">${badge.label}</span>
-    <span class="event-name">${escHtml(ev.event)}</span>
-    <span class="event-summary">${escHtml(ev.summary || "")}</span>
-  `;
-  hdr.addEventListener("click", () => card.classList.toggle("expanded"));
-
-  // Body
   const body = document.createElement("div");
-  body.className = "event-card-body";
+  body.className = "tag-body";
+  for (const ev of events) body.appendChild(buildOperation(ev, ns));
 
-  // Schema panels
-  const panels = document.createElement("div");
-  panels.className = "schema-panels";
-  panels.innerHTML = `
-    <div class="schema-panel">
-      <h4>Request</h4>
-      ${renderSchemaDetail(ev.request_schema)}
-    </div>
-    <div class="schema-panel">
-      <h4>Response</h4>
-      ${ev.response_schema ? renderSchemaDetail(ev.response_schema) : '<span class="no-data">Not defined</span>'}
-    </div>
-  `;
-  body.appendChild(panels);
-
-  // Params table
-  if (ev.request_schema && ev.request_schema.properties) {
-    const table = buildParamsTable(ev.request_schema);
-    body.appendChild(table);
-  }
-
-  // Try-it-out panel (only for emit events)
-  if (!ev.is_connect && !ev.is_disconnect) {
-    body.appendChild(buildTryPanel(ev, ns));
-  }
-
-  card.appendChild(hdr);
-  card.appendChild(body);
-  return card;
+  group.appendChild(header);
+  group.appendChild(body);
+  return group;
 }
 
-function renderSchemaDetail(schema) {
-  if (!schema) return '<span class="no-data">No payload</span>';
-  if (schema.properties) {
-    const lines = [];
-    const req = schema.required || [];
-    for (const [k, v] of Object.entries(schema.properties)) {
-      const star = req.includes(k) ? " *" : "";
-      lines.push(`${k}${star}: ${v.type || "any"}`);
-    }
-    return `<pre>${escHtml(lines.join("\n"))}</pre>`;
+/* ─── Operation Card ─── */
+function buildOperation(ev, ns) {
+  const op = document.createElement("div");
+  op.className = "operation";
+
+  const badge = getBadge(ev);
+
+  /* Header */
+  const hdr = document.createElement("div");
+  hdr.className = "op-header " + badge.bgCls;
+  hdr.innerHTML = `<span class="op-method ${badge.cls}">${badge.label}</span><span class="op-path">${esc(ev.event)}</span><span class="op-summary">${esc(ev.summary || "")}</span><span class="op-expand">▾</span>`;
+  hdr.onclick = () => op.classList.toggle("open");
+
+  /* Body */
+  const body = document.createElement("div");
+  body.className = "op-body " + badge.bodyCls;
+
+  /* Description */
+  if (ev.description && ev.description !== ev.summary) {
+    const desc = document.createElement("div");
+    desc.className = "op-desc";
+    desc.textContent = ev.description;
+    body.appendChild(desc);
   }
-  if (schema.type) {
-    return `<pre>${escHtml(schema.type)}</pre>`;
+
+  /* Parameters / Request Schema */
+  if (ev.request_schema) {
+    body.appendChild(buildRequestSection(ev));
   }
-  return '<span class="no-data">No payload</span>';
+
+  /* Responses */
+  body.appendChild(buildResponseSection(ev));
+
+  /* Try it out (only for emit events) */
+  if (!ev.is_connect && !ev.is_disconnect) {
+    body.appendChild(buildTrySection(ev, ns));
+  }
+
+  op.appendChild(hdr);
+  op.appendChild(body);
+  return op;
+}
+
+function getBadge(ev) {
+  if (ev.is_connect) return { label: "CONNECT", cls: "connect", bgCls: "orange-bg", bodyCls: "orange-body" };
+  if (ev.is_disconnect) return { label: "DISCONNECT", cls: "disconnect", bgCls: "red-bg", bodyCls: "red-body" };
+  return { label: "EMIT", cls: "emit", bgCls: "emit-bg", bodyCls: "emit-body" };
+}
+
+/* ─── Request Section ─── */
+function buildRequestSection(ev) {
+  const sec = document.createElement("div");
+  sec.className = "schema-section";
+
+  const titleRow = document.createElement("div");
+  titleRow.className = "schema-title-row";
+  titleRow.innerHTML = `<span class="section-title">Parameters</span>${ev.request_schema.title ? '<span class="schema-model-name">' + esc(ev.request_schema.title) + '</span>' : ''}`;
+  sec.appendChild(titleRow);
+
+  if (ev.request_schema.properties) {
+    sec.appendChild(buildParamsTable(ev.request_schema));
+    sec.appendChild(buildSchemaBlock(ev.request_schema));
+  } else if (ev.request_schema.type) {
+    const block = document.createElement("div");
+    block.className = "schema-block";
+    block.innerHTML = '<span class="s-type">' + esc(ev.request_schema.type) + '</span>';
+    sec.appendChild(block);
+  }
+
+  return sec;
 }
 
 function buildParamsTable(schema) {
   const required = schema.required || [];
   const table = document.createElement("table");
   table.className = "params-table";
-  table.innerHTML = `<thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Default</th></tr></thead>`;
+  table.innerHTML = '<thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>';
   const tbody = document.createElement("tbody");
   for (const [k, v] of Object.entries(schema.properties || {})) {
     const isReq = required.includes(k);
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${escHtml(k)}${isReq ? ' <span class="required-mark">*</span>' : ""}</td>
-      <td>${escHtml(v.type || "any")}</td>
-      <td>${isReq ? "Yes" : "No"}</td>
-      <td>${v.default !== undefined ? escHtml(JSON.stringify(v.default)) : "-"}</td>
+      <td><span class="param-name">${esc(k)}</span>${isReq ? '<span class="required">* required</span>' : ''}</td>
+      <td><span class="param-type">${esc(v.type || "any")}</span></td>
+      <td>${v.description ? esc(v.description) : '<span class="no-data">—</span>'}</td>
     `;
     tbody.appendChild(tr);
   }
@@ -368,35 +736,138 @@ function buildParamsTable(schema) {
   return table;
 }
 
-function buildTryPanel(ev, ns) {
-  const panel = document.createElement("div");
-  panel.className = "try-panel";
+function buildSchemaBlock(schema) {
+  const required = schema.required || [];
+  let lines = ['<span class="s-bracket">{</span>'];
+  for (const [k, v] of Object.entries(schema.properties || {})) {
+    const isReq = required.includes(k);
+    const reqMark = isReq ? ' <span class="s-required">// required</span>' : ' <span class="s-optional">// optional</span>';
+    const defStr = v.default !== undefined ? ' = ' + JSON.stringify(v.default) : '';
+    lines.push('  <span class="s-key">"' + esc(k) + '"</span>: <span class="s-type">' + esc(v.type || "any") + '</span>' + esc(defStr) + reqMark);
+  }
+  lines.push('<span class="s-bracket">}</span>');
+  const block = document.createElement("div");
+  block.className = "schema-block";
+  block.innerHTML = lines.join("\n");
+  return block;
+}
 
-  const example = ev.request_schema && ev.request_schema.properties
-    ? buildExample(ev.request_schema) : "";
+/* ─── Response Section ─── */
+function buildResponseSection(ev) {
+  const sec = document.createElement("div");
+  sec.className = "responses-section";
 
-  const logId = "log-" + ns.replace(/\//g, "_") + "-" + ev.event;
-  panel.innerHTML = `
-    <h4>Try it out</h4>
-    <textarea class="try-textarea">${escHtml(example ? JSON.stringify(example, null, 2) : "")}</textarea>
-    <div class="btn-row">
-      <button class="btn btn-primary try-send">Send</button>
-      <button class="btn btn-secondary try-clear">Clear log</button>
+  const title = document.createElement("div");
+  title.className = "section-title";
+  title.textContent = "Responses";
+  sec.appendChild(title);
+
+  if (ev.response_schema) {
+    if (ev.response_schema.title) {
+      const modelTag = document.createElement("div");
+      modelTag.style.cssText = "padding:8px 0;";
+      modelTag.innerHTML = '<span class="schema-model-name">' + esc(ev.response_schema.title) + '</span>';
+      sec.appendChild(modelTag);
+    }
+    if (ev.response_schema.properties) {
+      sec.appendChild(buildSchemaBlock(ev.response_schema));
+    } else if (ev.response_schema.type) {
+      const block = document.createElement("div");
+      block.className = "schema-block";
+      block.innerHTML = '<span class="s-type">' + esc(ev.response_schema.type) + '</span>';
+      sec.appendChild(block);
+    }
+  } else {
+    const nd = document.createElement("div");
+    nd.className = "no-data";
+    nd.style.padding = "10px 0";
+    nd.textContent = "No response schema defined";
+    sec.appendChild(nd);
+  }
+
+  return sec;
+}
+
+/* ─── Try It Out Section ─── */
+function buildTrySection(ev, ns) {
+  const sec = document.createElement("div");
+  sec.style.marginTop = "20px";
+
+  const example = ev.request_schema && ev.request_schema.properties ? buildExample(ev.request_schema) : "";
+  const uid = "try-" + ns.replace(/\//g, "_") + "-" + ev.event;
+
+  /* Try it out button */
+  const tryBtn = document.createElement("button");
+  tryBtn.className = "try-btn";
+  tryBtn.textContent = "Try it out";
+
+  /* Editor area (hidden initially) */
+  const editor = document.createElement("div");
+  editor.className = "try-editor";
+  editor.innerHTML = `
+    <label>Request body</label>
+    <textarea id="${uid}-ta">${esc(example ? JSON.stringify(example, null, 2) : "")}</textarea>
+    <div class="try-actions">
+      <button class="execute-btn" id="${uid}-exec">Execute</button>
+      <button class="cancel-try-btn" id="${uid}-cancel">Cancel</button>
     </div>
-    <div class="event-log" id="${logId}"></div>
   `;
 
-  const textarea = panel.querySelector(".try-textarea");
-  const logDiv = panel.querySelector(".event-log");
+  /* Response area (hidden initially) */
+  const resp = document.createElement("div");
+  resp.className = "server-response";
+  resp.innerHTML = `
+    <div class="response-header">
+      <h5>Server response</h5>
+      <button class="clear-response-btn" id="${uid}-clear">Clear</button>
+    </div>
+    <div class="response-log" id="${uid}-log"></div>
+  `;
 
-  panel.querySelector(".try-send").addEventListener("click", () => {
-    let payload;
-    try { payload = JSON.parse(textarea.value); } catch (e) { payload = textarea.value; }
-    sendEvent(ev.event, payload, ns, logDiv);
-  });
-  panel.querySelector(".try-clear").addEventListener("click", () => { logDiv.innerHTML = ""; });
+  let active = false;
 
-  return panel;
+  tryBtn.onclick = () => {
+    if (!active) {
+      active = true;
+      tryBtn.textContent = "Cancel";
+      tryBtn.classList.add("active");
+      editor.classList.add("visible");
+    } else {
+      active = false;
+      tryBtn.textContent = "Try it out";
+      tryBtn.classList.remove("active");
+      editor.classList.remove("visible");
+    }
+  };
+
+  sec.appendChild(tryBtn);
+  sec.appendChild(editor);
+  sec.appendChild(resp);
+
+  /* Wire up after DOM is ready */
+  setTimeout(() => {
+    const execBtn = document.getElementById(uid + "-exec");
+    const cancelBtn = document.getElementById(uid + "-cancel");
+    const clearBtn = document.getElementById(uid + "-clear");
+    const ta = document.getElementById(uid + "-ta");
+    const logDiv = document.getElementById(uid + "-log");
+
+    if (execBtn) execBtn.onclick = () => {
+      let payload;
+      try { payload = ta.value.trim() ? JSON.parse(ta.value) : undefined; } catch (e) { alert("Invalid JSON: " + e.message); return; }
+      resp.classList.add("visible");
+      sendEvent(ev.event, payload, logDiv);
+    };
+    if (cancelBtn) cancelBtn.onclick = () => {
+      active = false;
+      tryBtn.textContent = "Try it out";
+      tryBtn.classList.remove("active");
+      editor.classList.remove("visible");
+    };
+    if (clearBtn) clearBtn.onclick = () => { logDiv.innerHTML = ""; };
+  }, 0);
+
+  return sec;
 }
 
 function buildExample(schema) {
@@ -411,34 +882,36 @@ function buildExample(schema) {
   return obj;
 }
 
-// --- Socket.IO connection ---
-function connectSocket(url, namespace) {
+/* ═══════ Socket.IO ═══════ */
+function connectSio(url, ns) {
   if (socket) { socket.disconnect(); socket = null; }
-  socket = io(url + namespace, { transports: ["websocket", "polling"] });
+  socket = io(url + ns, { transports: ["websocket", "polling"] });
   socket.on("connect", () => {
-    document.getElementById("status-dot").classList.add("connected");
+    document.getElementById("conn-dot").classList.add("on");
+    document.getElementById("conn-text").textContent = "Online";
   });
   socket.on("disconnect", () => {
-    document.getElementById("status-dot").classList.remove("connected");
+    document.getElementById("conn-dot").classList.remove("on");
+    document.getElementById("conn-text").textContent = "Offline";
   });
-  // Listen for any event (catch-all)
   socket.onAny((eventName, ...args) => {
-    const activeLogs = document.querySelectorAll(".event-log");
-    activeLogs.forEach(log => {
+    document.querySelectorAll(".response-log").forEach(log => {
       addLog(log, "event", eventName, args.length === 1 ? args[0] : args);
     });
   });
 }
 
-function sendEvent(event, payload, ns, logDiv) {
+function sendEvent(event, payload, logDiv) {
   if (!socket || !socket.connected) {
-    addLog(logDiv, "error", "Not connected", null);
+    addLog(logDiv, "error", "Not connected — click Connect first", null);
     return;
   }
   addLog(logDiv, "emit", event, payload);
-  socket.emit(event, payload, (ack) => {
-    addLog(logDiv, "ack", event, ack);
-  });
+  if (payload !== undefined) {
+    socket.emit(event, payload, (ack) => { if (ack !== undefined) addLog(logDiv, "ack", event, ack); });
+  } else {
+    socket.emit(event, (ack) => { if (ack !== undefined) addLog(logDiv, "ack", event, ack); });
+  }
 }
 
 function addLog(logDiv, type, event, data) {
@@ -446,43 +919,34 @@ function addLog(logDiv, type, event, data) {
   entry.className = "log-entry";
   const ts = new Date().toLocaleTimeString();
   let arrow, label;
-  if (type === "emit") {
-    arrow = '<span class="arrow-out">&rarr;</span>';
-    label = '<span class="label-emit">emit</span>';
-  } else if (type === "ack") {
-    arrow = '<span class="arrow-in">&larr;</span>';
-    label = '<span class="label-ack">ack</span>';
-  } else if (type === "event") {
-    arrow = '<span class="arrow-in">&larr;</span>';
-    label = '<span class="label-event">event</span>';
-  } else {
-    arrow = '<span class="arrow-in">!</span>';
-    label = '<span class="label-event">error</span>';
-  }
-  const dataStr = data !== undefined && data !== null ? " " + JSON.stringify(data) : "";
-  entry.innerHTML = `<span class="timestamp">[${ts}]</span> ${arrow} ${label} <strong>${escHtml(event)}</strong>${escHtml(dataStr)}`;
+  if (type === "emit") { arrow = '<span class="arr-out">→</span>'; label = '<span class="lbl-emit">emit</span>'; }
+  else if (type === "ack") { arrow = '<span class="arr-in">←</span>'; label = '<span class="lbl-ack">ack</span>'; }
+  else if (type === "event") { arrow = '<span class="arr-in">←</span>'; label = '<span class="lbl-event">event</span>'; }
+  else { arrow = '<span class="arr-in">⚠</span>'; label = '<span class="lbl-err">error</span>'; }
+  const d = data !== undefined && data !== null ? " " + JSON.stringify(data) : "";
+  entry.innerHTML = `<span class="ts">${ts}</span> ${arrow} ${label} <span class="ev-name">${esc(event)}</span><span class="ev-data">${esc(d)}</span>`;
   logDiv.appendChild(entry);
   logDiv.scrollTop = logDiv.scrollHeight;
 }
 
-// --- Connection controls ---
-document.getElementById("connect-btn").addEventListener("click", function() {
+/* ═══════ Connection Controls ═══════ */
+document.getElementById("conn-btn").onclick = function() {
   if (socket && socket.connected) {
-    socket.disconnect();
-    socket = null;
+    socket.disconnect(); socket = null;
     this.textContent = "Connect";
-    this.className = "btn btn-primary";
-    document.getElementById("status-dot").classList.remove("connected");
+    this.classList.remove("connected");
+    document.getElementById("conn-dot").classList.remove("on");
+    document.getElementById("conn-text").textContent = "Offline";
   } else {
     const url = document.getElementById("server-url").value.replace(/\/$/, "");
     const ns = document.getElementById("ns-select").value;
-    connectSocket(url, ns);
+    connectSio(url, ns);
     this.textContent = "Disconnect";
-    this.className = "btn btn-danger";
+    this.classList.add("connected");
   }
-});
+};
 
-function escHtml(s) {
+function esc(s) {
   if (!s) return "";
   return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 }
