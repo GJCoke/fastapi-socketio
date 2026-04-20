@@ -12,7 +12,7 @@ sio = AsyncServer(async_mode="asgi", cors_allowed_origins=["*"])
 sio.instrument({"username": "admin", "password": "123456"})
 sio_app = socketio.ASGIApp(sio)
 app.mount("/socket.io", sio_app)
-sio.setup_docs(app, title="Example Socket.IO API", version="0.1.0")
+sio.setup_docs(app, title="Example Socket.IO API", version="0.1.0", description="Example Socket.IO API")
 
 
 class MyBase(BaseModel):

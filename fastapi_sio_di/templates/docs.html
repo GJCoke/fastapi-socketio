@@ -195,6 +195,16 @@ body {
   position: relative;
   top: -6px;
 }
+.info-schema-url {
+  font-size: 14px;
+  margin-top: 8px;
+}
+.info-description {
+  font-size: 14px;
+  color: var(--sw-text-secondary);
+  margin-top: 8px;
+  line-height: 1.6;
+}
 .info-base-url {
   font-size: 14px;
   color: var(--sw-text-secondary);
@@ -204,6 +214,15 @@ body {
   font-family: var(--sw-font-mono);
   font-size: 12px;
   color: var(--sw-text);
+}
+.schema-link {
+  font-family: var(--sw-font-mono);
+  font-size: 12px;
+  color: var(--sw-blue);
+  text-decoration: none;
+}
+.schema-link:hover {
+  text-decoration: underline;
 }
 
 /* ═══════ Main ═══════ */
@@ -826,7 +845,9 @@ body {
 <div class="info-section">
   <div class="info-inner">
     <h1 class="info-title">{{title}} <small id="version-badge"></small></h1>
+    <div class="info-schema-url"><a id="schema-link" href="" target="_blank" class="schema-link"></a></div>
     <div class="info-base-url" id="base-url-display"></div>
+    <div class="info-description" id="info-description"></div>
   </div>
 </div>
 
@@ -846,7 +867,16 @@ fetch(SCHEMA_URL).then(r => r.json()).then(data => {
   document.getElementById("version-badge").textContent = "v" + (data.version || "1.0.0");
   const origin = window.location.origin;
   document.getElementById("server-url").value = origin;
+  const schemaLink = document.getElementById("schema-link");
+  schemaLink.href = SCHEMA_URL;
+  schemaLink.textContent = SCHEMA_URL;
   document.getElementById("base-url-display").innerHTML = 'Base URL: <code>' + esc(origin) + '</code>';
+  const descEl = document.getElementById("info-description");
+  if (data.description) {
+    descEl.textContent = data.description;
+  } else {
+    descEl.style.display = "none";
+  }
   populateNs(data);
   render(data);
 }).catch(() => {

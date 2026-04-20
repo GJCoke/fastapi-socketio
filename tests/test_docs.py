@@ -354,6 +354,20 @@ class TestSetupDocs:
         html = client.get("/sio-docs").text
         assert "My API" in html
 
+    def test_description_in_schema(self):
+        app, sio = self._create_app_with_docs(description="A real-time chat API")
+        client = TestClient(app)
+
+        data = client.get("/sio-docs/schema").json()
+        assert data["description"] == "A real-time chat API"
+
+    def test_no_description_omitted_from_schema(self):
+        app, sio = self._create_app_with_docs()
+        client = TestClient(app)
+
+        data = client.get("/sio-docs/schema").json()
+        assert "description" not in data
+
 
 class TestPublicAPI:
     def test_eventdoc_importable_from_package(self):

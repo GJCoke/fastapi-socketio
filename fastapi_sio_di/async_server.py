@@ -211,10 +211,11 @@ class AsyncServer(SocketIOAsyncServer):
         path: str = "/sio-docs",
         title: str = "Socket.IO API",
         version: str = "1.0.0",
+        description: Optional[str] = None,
     ) -> None:
         """Mount interactive Socket.IO API documentation on the given app."""
         from .docs import setup_docs as _setup_docs
-        _setup_docs(self, app, path=path, title=title, version=version)
+        _setup_docs(self, app, path=path, title=title, version=version, description=description)
 
     def instrument(
         self,

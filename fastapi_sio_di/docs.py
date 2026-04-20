@@ -123,6 +123,7 @@ def build_schema(
     registry: list[EventDoc],
     title: str = "Socket.IO API",
     version: str = "1.0.0",
+    description: Optional[str] = None,
 ) -> dict[str, Any]:
     namespaces: dict[str, dict[str, Any]] = {}
     for doc in registry:
@@ -131,11 +132,14 @@ def build_schema(
             namespaces[ns] = {"events": []}
         namespaces[ns]["events"].append(build_event_schema(doc))
 
-    return {
+    schema: dict[str, Any] = {
         "title": title,
         "version": version,
         "namespaces": namespaces,
     }
+    if description:
+        schema["description"] = description
+    return schema
 
 
 def _load_template() -> str:
@@ -150,12 +154,13 @@ def setup_docs(
     path: str = "/sio-docs",
     title: str = "Socket.IO API",
     version: str = "1.0.0",
+    description: Optional[str] = None,
 ) -> None:
     """Register docs routes on the given Starlette/FastAPI app."""
     path = path.rstrip("/")
 
     async def schema_endpoint(request: Request) -> JSONResponse:
-        schema = build_schema(sio._event_registry, title=title, version=version)
+        schema = build_schema(sio._event_registry, title=title, version=version, description=description)
         return JSONResponse(schema)
 
     async def docs_endpoint(request: Request) -> HTMLResponse:
