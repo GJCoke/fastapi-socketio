@@ -13,6 +13,7 @@ sio = AsyncServer(async_mode="asgi", cors_allowed_origins=["*"])
 sio.instrument({"username": "admin", "password": "123456"})
 sio_app = socketio.ASGIApp(sio)
 app.mount("/socket.io", sio_app)
+sio.setup_docs(app, title="Example Socket.IO API", version="0.1.0")
 
 
 class MyBase(BaseModel):
@@ -21,6 +22,10 @@ class MyBase(BaseModel):
 
 class Message(MyBase):
     msg: str
+
+
+class Reply(BaseModel):
+    status: str
 
 
 async def test1():
@@ -47,8 +52,12 @@ async def on_disconnect(sid: SID, data: str):
     print("Disconnected", sid, data)
 
 
-@sio.on("message")
+@sio.on("message", response_model=Reply)
 async def handle_message(data: Message, test=Depends(get_token)):
+    """Send a message to the server.
+
+    Receives a message payload and broadcasts a reply.
+    """
     print(f"User with token sent: {data, test}")
     await sio.emit("reply", {"status": "ok"})
 
