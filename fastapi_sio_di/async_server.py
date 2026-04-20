@@ -4,6 +4,7 @@ from typing import Any, Callable, Optional, Union, overload, TypeVar
 from pydantic import BaseModel
 
 from .dependencies import Dependant, LifespanContext, solve_dependant
+from .docs import EventDoc
 from .params import Environ
 from socketio import AsyncServer as SocketIOAsyncServer
 
@@ -34,6 +35,7 @@ class AsyncServer(SocketIOAsyncServer):
             cors_allowed_origins = "*"
         self.serializer = serializer
         self.dependency_overrides: dict[Callable, Callable] = {}
+        self._event_registry: list[EventDoc] = []
         super().__init__(cors_allowed_origins=cors_allowed_origins, **kwargs)
 
     def on(
@@ -41,6 +43,7 @@ class AsyncServer(SocketIOAsyncServer):
         event: str,
         handler: Optional[Callable] = None,
         namespace: Optional[str] = None,
+        response_model: Optional[type] = None,
     ) -> Callable:
         """
         Register an event handler with dependency injection support.
@@ -54,6 +57,15 @@ class AsyncServer(SocketIOAsyncServer):
 
         def decorator(func: Callable) -> Callable:
             dependant = Dependant(func)
+
+            event_doc = EventDoc.from_handler(
+                event=event,
+                namespace=namespace or "/",
+                handler=func,
+                dependant=dependant,
+                response_model=response_model,
+            )
+            self._event_registry.append(event_doc)
 
             @wraps(func)
             async def wrapper(sid: str, *args: Any, **kwargs: Any) -> None:

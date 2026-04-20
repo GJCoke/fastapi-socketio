@@ -222,3 +222,67 @@ class TestBuildSchema:
         assert len(schema["namespaces"]["/"]["events"]) == 1
         assert len(schema["namespaces"]["/chat"]["events"]) == 1
         assert schema["namespaces"]["/"]["events"][0]["event"] == "chat"
+
+
+# --- AsyncServer integration ---
+
+from fastapi_sio_di import AsyncServer
+
+
+class TestAsyncServerRegistry:
+    def test_on_decorator_populates_registry(self):
+        sio = AsyncServer()
+
+        @sio.on("chat")
+        async def handle_chat(sid: SID, data: ChatMessage):
+            """Chat handler."""
+            pass
+
+        assert len(sio._event_registry) == 1
+        doc = sio._event_registry[0]
+        assert doc.event == "chat"
+        assert doc.namespace == "/"
+        assert doc.summary == "Chat handler."
+
+    def test_on_with_response_model(self):
+        sio = AsyncServer()
+
+        @sio.on("chat", response_model=ChatResponse)
+        async def handle_chat(sid: SID, data: ChatMessage):
+            pass
+
+        doc = sio._event_registry[0]
+        assert doc.response_model is ChatResponse
+
+    def test_on_with_namespace(self):
+        sio = AsyncServer()
+
+        @sio.on("join", namespace="/chat")
+        async def handle_join(sid: SID):
+            pass
+
+        doc = sio._event_registry[0]
+        assert doc.namespace == "/chat"
+
+    def test_on_response_model_from_return_type(self):
+        sio = AsyncServer()
+
+        @sio.on("chat")
+        async def handle_chat(sid: SID) -> ChatResponse:
+            pass
+
+        doc = sio._event_registry[0]
+        assert doc.response_model is ChatResponse
+
+    def test_multiple_events_registered(self):
+        sio = AsyncServer()
+
+        @sio.on("chat")
+        async def h1(sid: SID):
+            pass
+
+        @sio.on("join", namespace="/room")
+        async def h2(sid: SID):
+            pass
+
+        assert len(sio._event_registry) == 2
