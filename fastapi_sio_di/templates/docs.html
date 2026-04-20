@@ -2,17 +2,490 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{title}}</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f8f9fa;
+  color: #212529;
+  line-height: 1.5;
+}
+
+/* Header */
+.header {
+  background: #fff;
+  border-bottom: 1px solid #dee2e6;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.header h1 { font-size: 1.25rem; font-weight: 600; }
+.version-badge {
+  background: #0d6efd;
+  color: #fff;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+/* Connection bar */
+.connection-bar {
+  background: #fff;
+  border-bottom: 1px solid #dee2e6;
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.connection-bar label { font-size: 0.85rem; font-weight: 500; }
+.connection-bar input,
+.connection-bar select {
+  padding: 6px 10px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+.connection-bar input { width: 260px; }
+.btn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-weight: 500;
+}
+.btn-primary { background: #0d6efd; color: #fff; }
+.btn-primary:hover { background: #0b5ed7; }
+.btn-danger { background: #dc3545; color: #fff; }
+.btn-danger:hover { background: #bb2d3b; }
+.btn-secondary { background: #6c757d; color: #fff; }
+.btn-secondary:hover { background: #5c636a; }
+.status-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #dc3545;
+  display: inline-block;
+}
+.status-dot.connected { background: #198754; }
+
+/* Main content */
+.main { max-width: 1100px; margin: 24px auto; padding: 0 24px; }
+
+/* Namespace group */
+.namespace-group { margin-bottom: 20px; }
+.namespace-header {
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 10px 0;
+  border-bottom: 2px solid #0d6efd;
+  margin-bottom: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.namespace-header::before { content: "\25BC "; font-size: 0.7rem; }
+.namespace-header.collapsed::before { content: "\25B6 "; }
+.namespace-body.hidden { display: none; }
+
+/* Event card */
+.event-card {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+.event-card-header {
+  padding: 10px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+}
+.event-card-header:hover { background: #f8f9fa; }
+.type-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 3px;
+  color: #fff;
+  min-width: 70px;
+  text-align: center;
+}
+.type-badge.emit { background: #198754; }
+.type-badge.connect { background: #fd7e14; }
+.type-badge.disconnect { background: #dc3545; }
+.event-name { font-weight: 600; font-size: 0.9rem; }
+.event-summary { color: #6c757d; font-size: 0.85rem; margin-left: auto; }
+.event-card-body { display: none; padding: 14px; border-top: 1px solid #dee2e6; }
+.event-card.expanded .event-card-body { display: block; }
+
+/* Schema panels */
+.schema-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+@media (max-width: 700px) { .schema-panels { grid-template-columns: 1fr; } }
+.schema-panel h4 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: #6c757d;
+  margin-bottom: 6px;
+}
+.schema-panel pre {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 10px;
+  font-size: 0.8rem;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+.schema-panel .no-data { color: #6c757d; font-style: italic; font-size: 0.85rem; }
+
+/* Params table */
+.params-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  margin-bottom: 14px;
+}
+.params-table th, .params-table td {
+  text-align: left;
+  padding: 5px 8px;
+  border-bottom: 1px solid #dee2e6;
+}
+.params-table th { font-weight: 600; color: #6c757d; }
+.required-mark { color: #dc3545; font-weight: 700; }
+
+/* Try-it-out */
+.try-panel { border-top: 1px solid #dee2e6; padding-top: 14px; }
+.try-panel h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; }
+.try-panel textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 8px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.82rem;
+  resize: vertical;
+  margin-bottom: 8px;
+}
+.try-panel .btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.event-log {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: monospace;
+  font-size: 0.78rem;
+}
+.event-log .log-entry { margin-bottom: 4px; }
+.log-entry .arrow-out { color: #198754; }
+.log-entry .arrow-in { color: #fd7e14; }
+.log-entry .label-emit { color: #198754; font-weight: 600; }
+.log-entry .label-ack { color: #fd7e14; font-weight: 600; }
+.log-entry .label-event { color: #dc3545; font-weight: 600; }
+.log-entry .timestamp { color: #6c757d; }
+</style>
 </head>
 <body>
-<h1>{{title}}</h1>
-<p>Loading docs from <code>{{schema_url}}</code>...</p>
-<div id="app"></div>
+
+<div class="header">
+  <h1>{{title}}</h1>
+  <span class="version-badge" id="version-badge"></span>
+</div>
+
+<div class="connection-bar">
+  <label>Server:</label>
+  <input type="text" id="server-url" placeholder="http://localhost:8000">
+  <label>Namespace:</label>
+  <select id="ns-select"><option value="/">/</option></select>
+  <button class="btn btn-primary" id="connect-btn">Connect</button>
+  <span class="status-dot" id="status-dot"></span>
+</div>
+
+<div class="main" id="app"></div>
+
 <script>
 const SCHEMA_URL = "{{schema_url}}";
+let socket = null;
+let schemaData = null;
+
+// --- Fetch and render schema ---
 fetch(SCHEMA_URL).then(r => r.json()).then(data => {
-  document.getElementById("app").textContent = JSON.stringify(data, null, 2);
+  schemaData = data;
+  document.getElementById("version-badge").textContent = "v" + (data.version || "1.0.0");
+  document.getElementById("server-url").value = window.location.origin;
+  populateNamespaces(data);
+  renderSchema(data);
 });
+
+function populateNamespaces(data) {
+  const sel = document.getElementById("ns-select");
+  sel.innerHTML = "";
+  for (const ns of Object.keys(data.namespaces || {})) {
+    const opt = document.createElement("option");
+    opt.value = ns;
+    opt.textContent = ns;
+    sel.appendChild(opt);
+  }
+}
+
+function renderSchema(data) {
+  const app = document.getElementById("app");
+  app.innerHTML = "";
+  const namespaces = data.namespaces || {};
+  for (const [ns, nsData] of Object.entries(namespaces)) {
+    const group = document.createElement("div");
+    group.className = "namespace-group";
+
+    const header = document.createElement("div");
+    header.className = "namespace-header";
+    header.textContent = ns;
+    header.addEventListener("click", () => {
+      header.classList.toggle("collapsed");
+      body.classList.toggle("hidden");
+    });
+
+    const body = document.createElement("div");
+    body.className = "namespace-body";
+
+    for (const ev of (nsData.events || [])) {
+      body.appendChild(buildEventCard(ev, ns));
+    }
+
+    group.appendChild(header);
+    group.appendChild(body);
+    app.appendChild(group);
+  }
+}
+
+function getTypeBadge(ev) {
+  if (ev.is_connect) return { label: "CONNECT", cls: "connect" };
+  if (ev.is_disconnect) return { label: "DISCONNECT", cls: "disconnect" };
+  return { label: "EMIT", cls: "emit" };
+}
+
+function buildEventCard(ev, ns) {
+  const card = document.createElement("div");
+  card.className = "event-card";
+
+  const badge = getTypeBadge(ev);
+
+  // Header
+  const hdr = document.createElement("div");
+  hdr.className = "event-card-header";
+  hdr.innerHTML = `
+    <span class="type-badge ${badge.cls}">${badge.label}</span>
+    <span class="event-name">${escHtml(ev.event)}</span>
+    <span class="event-summary">${escHtml(ev.summary || "")}</span>
+  `;
+  hdr.addEventListener("click", () => card.classList.toggle("expanded"));
+
+  // Body
+  const body = document.createElement("div");
+  body.className = "event-card-body";
+
+  // Schema panels
+  const panels = document.createElement("div");
+  panels.className = "schema-panels";
+  panels.innerHTML = `
+    <div class="schema-panel">
+      <h4>Request</h4>
+      ${renderSchemaDetail(ev.request_schema)}
+    </div>
+    <div class="schema-panel">
+      <h4>Response</h4>
+      ${ev.response_schema ? renderSchemaDetail(ev.response_schema) : '<span class="no-data">Not defined</span>'}
+    </div>
+  `;
+  body.appendChild(panels);
+
+  // Params table
+  if (ev.request_schema && ev.request_schema.properties) {
+    const table = buildParamsTable(ev.request_schema);
+    body.appendChild(table);
+  }
+
+  // Try-it-out panel (only for emit events)
+  if (!ev.is_connect && !ev.is_disconnect) {
+    body.appendChild(buildTryPanel(ev, ns));
+  }
+
+  card.appendChild(hdr);
+  card.appendChild(body);
+  return card;
+}
+
+function renderSchemaDetail(schema) {
+  if (!schema) return '<span class="no-data">No payload</span>';
+  if (schema.properties) {
+    const lines = [];
+    const req = schema.required || [];
+    for (const [k, v] of Object.entries(schema.properties)) {
+      const star = req.includes(k) ? " *" : "";
+      lines.push(`${k}${star}: ${v.type || "any"}`);
+    }
+    return `<pre>${escHtml(lines.join("\n"))}</pre>`;
+  }
+  if (schema.type) {
+    return `<pre>${escHtml(schema.type)}</pre>`;
+  }
+  return '<span class="no-data">No payload</span>';
+}
+
+function buildParamsTable(schema) {
+  const required = schema.required || [];
+  const table = document.createElement("table");
+  table.className = "params-table";
+  table.innerHTML = `<thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Default</th></tr></thead>`;
+  const tbody = document.createElement("tbody");
+  for (const [k, v] of Object.entries(schema.properties || {})) {
+    const isReq = required.includes(k);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${escHtml(k)}${isReq ? ' <span class="required-mark">*</span>' : ""}</td>
+      <td>${escHtml(v.type || "any")}</td>
+      <td>${isReq ? "Yes" : "No"}</td>
+      <td>${v.default !== undefined ? escHtml(JSON.stringify(v.default)) : "-"}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  return table;
+}
+
+function buildTryPanel(ev, ns) {
+  const panel = document.createElement("div");
+  panel.className = "try-panel";
+
+  const example = ev.request_schema && ev.request_schema.properties
+    ? buildExample(ev.request_schema) : "";
+
+  const logId = "log-" + ns.replace(/\//g, "_") + "-" + ev.event;
+  panel.innerHTML = `
+    <h4>Try it out</h4>
+    <textarea class="try-textarea">${escHtml(example ? JSON.stringify(example, null, 2) : "")}</textarea>
+    <div class="btn-row">
+      <button class="btn btn-primary try-send">Send</button>
+      <button class="btn btn-secondary try-clear">Clear log</button>
+    </div>
+    <div class="event-log" id="${logId}"></div>
+  `;
+
+  const textarea = panel.querySelector(".try-textarea");
+  const logDiv = panel.querySelector(".event-log");
+
+  panel.querySelector(".try-send").addEventListener("click", () => {
+    let payload;
+    try { payload = JSON.parse(textarea.value); } catch (e) { payload = textarea.value; }
+    sendEvent(ev.event, payload, ns, logDiv);
+  });
+  panel.querySelector(".try-clear").addEventListener("click", () => { logDiv.innerHTML = ""; });
+
+  return panel;
+}
+
+function buildExample(schema) {
+  const obj = {};
+  for (const [k, v] of Object.entries(schema.properties || {})) {
+    if (v.default !== undefined) obj[k] = v.default;
+    else if (v.type === "string") obj[k] = "";
+    else if (v.type === "integer" || v.type === "number") obj[k] = 0;
+    else if (v.type === "boolean") obj[k] = false;
+    else obj[k] = null;
+  }
+  return obj;
+}
+
+// --- Socket.IO connection ---
+function connectSocket(url, namespace) {
+  if (socket) { socket.disconnect(); socket = null; }
+  socket = io(url + namespace, { transports: ["websocket", "polling"] });
+  socket.on("connect", () => {
+    document.getElementById("status-dot").classList.add("connected");
+  });
+  socket.on("disconnect", () => {
+    document.getElementById("status-dot").classList.remove("connected");
+  });
+  // Listen for any event (catch-all)
+  socket.onAny((eventName, ...args) => {
+    const activeLogs = document.querySelectorAll(".event-log");
+    activeLogs.forEach(log => {
+      addLog(log, "event", eventName, args.length === 1 ? args[0] : args);
+    });
+  });
+}
+
+function sendEvent(event, payload, ns, logDiv) {
+  if (!socket || !socket.connected) {
+    addLog(logDiv, "error", "Not connected", null);
+    return;
+  }
+  addLog(logDiv, "emit", event, payload);
+  socket.emit(event, payload, (ack) => {
+    addLog(logDiv, "ack", event, ack);
+  });
+}
+
+function addLog(logDiv, type, event, data) {
+  const entry = document.createElement("div");
+  entry.className = "log-entry";
+  const ts = new Date().toLocaleTimeString();
+  let arrow, label;
+  if (type === "emit") {
+    arrow = '<span class="arrow-out">&rarr;</span>';
+    label = '<span class="label-emit">emit</span>';
+  } else if (type === "ack") {
+    arrow = '<span class="arrow-in">&larr;</span>';
+    label = '<span class="label-ack">ack</span>';
+  } else if (type === "event") {
+    arrow = '<span class="arrow-in">&larr;</span>';
+    label = '<span class="label-event">event</span>';
+  } else {
+    arrow = '<span class="arrow-in">!</span>';
+    label = '<span class="label-event">error</span>';
+  }
+  const dataStr = data !== undefined && data !== null ? " " + JSON.stringify(data) : "";
+  entry.innerHTML = `<span class="timestamp">[${ts}]</span> ${arrow} ${label} <strong>${escHtml(event)}</strong>${escHtml(dataStr)}`;
+  logDiv.appendChild(entry);
+  logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+// --- Connection controls ---
+document.getElementById("connect-btn").addEventListener("click", function() {
+  if (socket && socket.connected) {
+    socket.disconnect();
+    socket = null;
+    this.textContent = "Connect";
+    this.className = "btn btn-primary";
+    document.getElementById("status-dot").classList.remove("connected");
+  } else {
+    const url = document.getElementById("server-url").value.replace(/\/$/, "");
+    const ns = document.getElementById("ns-select").value;
+    connectSocket(url, ns);
+    this.textContent = "Disconnect";
+    this.className = "btn btn-danger";
+  }
+});
+
+function escHtml(s) {
+  if (!s) return "";
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
 </script>
 </body>
 </html>
