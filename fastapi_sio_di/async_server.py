@@ -205,6 +205,17 @@ class AsyncServer(SocketIOAsyncServer):
         """Sleep for a given number of seconds."""
         return await super().sleep(seconds=seconds)
 
+    def setup_docs(
+        self,
+        app,
+        path: str = "/sio-docs",
+        title: str = "Socket.IO API",
+        version: str = "1.0.0",
+    ) -> None:
+        """Mount interactive Socket.IO API documentation on the given app."""
+        from .docs import setup_docs as _setup_docs
+        _setup_docs(self, app, path=path, title=title, version=version)
+
     def instrument(
         self,
         auth=None,

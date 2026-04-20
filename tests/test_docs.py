@@ -286,3 +286,70 @@ class TestAsyncServerRegistry:
             pass
 
         assert len(sio._event_registry) == 2
+
+
+# --- setup_docs route registration ---
+
+from starlette.testclient import TestClient
+
+
+class TestSetupDocs:
+    def _create_app_with_docs(self, **kwargs):
+        """Helper: create a Starlette app with sio docs mounted."""
+        from starlette.applications import Starlette
+
+        sio = AsyncServer()
+
+        @sio.on("chat", response_model=ChatResponse)
+        async def handle_chat(sid: SID, data: ChatMessage):
+            """Process chat messages."""
+            pass
+
+        @sio.on("join", namespace="/room")
+        async def handle_join(sid: SID):
+            """Join a room."""
+            pass
+
+        app = Starlette()
+        sio.setup_docs(app, **kwargs)
+        return app, sio
+
+    def test_schema_endpoint_returns_json(self):
+        app, sio = self._create_app_with_docs()
+        client = TestClient(app)
+
+        resp = client.get("/sio-docs/schema")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["title"] == "Socket.IO API"
+        assert "/" in data["namespaces"]
+        assert "/room" in data["namespaces"]
+        assert len(data["namespaces"]["/"]["events"]) == 1
+        assert data["namespaces"]["/"]["events"][0]["event"] == "chat"
+
+    def test_docs_page_returns_html(self):
+        app, sio = self._create_app_with_docs()
+        client = TestClient(app)
+
+        resp = client.get("/sio-docs")
+        assert resp.status_code == 200
+        assert "text/html" in resp.headers["content-type"]
+        assert "Socket.IO API" in resp.text
+
+    def test_custom_path(self):
+        app, sio = self._create_app_with_docs(path="/my-docs")
+        client = TestClient(app)
+
+        assert client.get("/my-docs").status_code == 200
+        assert client.get("/my-docs/schema").status_code == 200
+
+    def test_custom_title_and_version(self):
+        app, sio = self._create_app_with_docs(title="My API", version="2.0.0")
+        client = TestClient(app)
+
+        data = client.get("/sio-docs/schema").json()
+        assert data["title"] == "My API"
+        assert data["version"] == "2.0.0"
+
+        html = client.get("/sio-docs").text
+        assert "My API" in html

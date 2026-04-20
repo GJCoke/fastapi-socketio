@@ -2,9 +2,13 @@
 
 import inspect
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 from pydantic import BaseModel
+from starlette.requests import Request
+from starlette.responses import HTMLResponse, JSONResponse
+from starlette.routing import Route
 
 from .dependencies import Dependant
 
@@ -132,3 +136,32 @@ def build_schema(
         "version": version,
         "namespaces": namespaces,
     }
+
+
+def _load_template() -> str:
+    """Load the HTML template from the templates directory."""
+    template_path = Path(__file__).parent / "templates" / "docs.html"
+    return template_path.read_text(encoding="utf-8")
+
+
+def setup_docs(
+    sio: Any,
+    app: Any,
+    path: str = "/sio-docs",
+    title: str = "Socket.IO API",
+    version: str = "1.0.0",
+) -> None:
+    """Register docs routes on the given Starlette/FastAPI app."""
+    path = path.rstrip("/")
+
+    async def schema_endpoint(request: Request) -> JSONResponse:
+        schema = build_schema(sio._event_registry, title=title, version=version)
+        return JSONResponse(schema)
+
+    async def docs_endpoint(request: Request) -> HTMLResponse:
+        template = _load_template()
+        html = template.replace("{{title}}", title).replace("{{schema_url}}", f"{path}/schema")
+        return HTMLResponse(html)
+
+    app.routes.insert(0, Route(f"{path}/schema", schema_endpoint))
+    app.routes.insert(0, Route(path, docs_endpoint))
