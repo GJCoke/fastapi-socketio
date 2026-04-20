@@ -1,6 +1,6 @@
 [project]
 name = "fastapi-sio-di"
-version = "0.5.0"
+version = "0.5.1"
 description = "FastAPI-SIO-DI is a library tailored for integrating Socket.IO with FastAPI. It allows you to develop real-time WebSocket applications using the familiar FastAPI style (Dependency Injection, Pydantic models)."
 requires-python = ">=3.10"
 dependencies = [
@@ -19,6 +19,12 @@ dev = [
     "httpx>=0.28.0",
 ]
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fastapi_sio_di"]
 
 [tool.ruff]
 line-length = 120
