@@ -68,7 +68,7 @@ class AsyncServer(SocketIOAsyncServer):
             self._event_registry.append(event_doc)
 
             @wraps(func)
-            async def wrapper(sid: str, *args: Any, **kwargs: Any) -> None:
+            async def wrapper(sid: str, *args: Any, **kwargs: Any) -> Any:
                 cache: dict[str, Any] = {}
 
                 data = args[0] if args else None
@@ -163,7 +163,7 @@ class AsyncServer(SocketIOAsyncServer):
         namespace: Optional[str] = None,
         timeout: int = 60,
         ignore_queue: bool = False,
-    ) -> None:
+    ) -> Any:
         """Emit a custom event to a client and wait for the response."""
         return await super().call(
             event=event,
