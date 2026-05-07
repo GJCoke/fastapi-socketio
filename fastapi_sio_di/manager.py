@@ -50,7 +50,7 @@ class AsyncRedisCallManager(AsyncRedisManager):
         if not data:
             return None
         if len(data) == 1:
-            return (data[0],)
+            return data[0]
         return tuple(data)
 
     async def _emit_with_call_id(self, event: str, data, namespace: str,

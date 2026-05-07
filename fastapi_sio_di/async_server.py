@@ -193,6 +193,9 @@ class AsyncServer(SocketIOAsyncServer):
             )
 
         # Cross-instance path
+        if not self.manager.connected:
+            self.manager._redis_connect()
+
         call_id = self.manager._generate_call_id()
         key = f"sio:call:{call_id}"
 
