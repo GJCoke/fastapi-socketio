@@ -1,12 +1,14 @@
 import asyncio
 from functools import wraps
-from typing import Any, Callable, Optional, Union, overload, TypeVar
+from typing import Any, Callable, Optional, TypeVar, Union, overload
+
 from pydantic import BaseModel
+from socketio import AsyncServer as SocketIOAsyncServer
 
 from .dependencies import Dependant, LifespanContext, solve_dependant
 from .docs import EventDoc
+from .manager import AsyncRedisCallManager
 from .params import Environ
-from socketio import AsyncServer as SocketIOAsyncServer
 
 T = TypeVar("T")
 
@@ -164,16 +166,48 @@ class AsyncServer(SocketIOAsyncServer):
         timeout: int = 60,
         ignore_queue: bool = False,
     ) -> Any:
-        """Emit a custom event to a client and wait for the response."""
-        return await super().call(
-            event=event,
-            data=data,
-            to=to,
-            sid=sid,
-            namespace=namespace,
-            timeout=timeout,
-            ignore_queue=ignore_queue,
+        """Emit a custom event to a client and wait for the response.
+
+        Supports cross-instance calls when using AsyncRedisCallManager.
+        If the target client is on another instance, the call is routed
+        through Redis (BLPOP) for the response.
+        """
+        data = self._pydantic_model_to_dict(data)
+        target = to or sid
+        namespace = namespace or '/'
+
+        # If not using cross-instance manager, fall back to parent
+        if not isinstance(self.manager, AsyncRedisCallManager):
+            return await super().call(
+                event=event, data=data, to=to, sid=sid,
+                namespace=namespace, timeout=timeout,
+                ignore_queue=ignore_queue,
+            )
+
+        # Local short-circuit: target is on this instance
+        if self.manager.is_connected(target, namespace):
+            return await super().call(
+                event=event, data=data, to=target, sid=None,
+                namespace=namespace, timeout=timeout,
+                ignore_queue=True,  # local, no need for queue
+            )
+
+        # Cross-instance path
+        call_id = self.manager._generate_call_id()
+        key = f"sio:call:{call_id}"
+
+        await self.manager._emit_with_call_id(
+            event=event, data=data, namespace=namespace,
+            room=target, call_id=call_id, timeout=timeout,
         )
+
+        result = await self.manager.redis.blpop(key, timeout=timeout)
+        if result is None:
+            raise TimeoutError(
+                f"call({event}) to {target} timed out after {timeout}s"
+            )
+
+        return self.manager._unpack_result(result[1])
 
     async def enter_room(
         self, sid: str, room: str, namespace: Optional[str] = None

@@ -5,3 +5,12 @@ class SocketIOValidationError(Exception):
         self.errors = errors
         self.model_name = model_name
         super().__init__(f"Validation error for {model_name}: {errors}")
+
+
+class CallError(Exception):
+    """Raised when a cross-instance call fails."""
+
+    def __init__(self, code: str, message: str):
+        self.code = code
+        self.message = message
+        super().__init__(f"CallError({code}): {message}")
